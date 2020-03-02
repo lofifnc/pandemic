@@ -28,6 +28,7 @@ FONT = {
 
 matplotlib.use("TkAgg")
 
+
 class Visualization:
 
     _canvas: FigureCanvasTkAgg
@@ -41,13 +42,13 @@ class Visualization:
         self._simulation = simulation
         self._state = start_state
         self.plot()
-        self._canvas.mpl_connect('key_press_event', self.on_key_event)
+        self._canvas.mpl_connect("key_press_event", self.on_key_event)
 
         self._window.mainloop()
 
     def on_key_event(self, event: KeyEvent):
         print(event)
-        print('you pressed %s' % event.key)
+        print("you pressed %s" % event.key)
         if event.key == "n":
             self._state = self._simulation(self._state)
             self.update_plot()
@@ -118,5 +119,3 @@ class Visualization:
             self._txt[city_id].set_text(text)
 
         self._canvas.draw()
-
-

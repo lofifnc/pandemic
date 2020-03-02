@@ -4,7 +4,6 @@ from pandemic.model.constants import *
 
 
 class Player:
-
     def __init__(self):
         self._city = PLAYER_START
         self._cards: List[str] = []

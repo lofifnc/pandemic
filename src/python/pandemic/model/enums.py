@@ -16,14 +16,22 @@ class Virus(Enum):
 
 
 class MovementAction(Enum):
-    MOVE = 1
-    DIRECT_FLIGHT = 2
-    CHARTER_FLIGHT = 3
-    SHUTTLE_FLIGHT = 4
+    def __init__(self, value, command):
+        self.value = value
+        self.command = command
+
+    DRIVE = (1, "d")
+    DIRECT_FLIGHT = (2, "f")
+    CHARTER_FLIGHT = (3, "c")
+    SHUTTLE_FLIGHT = (4, "s")
 
 
 class OtherAction(Enum):
-    BUILD_RESEARCH_STATION = 1
-    TREAT_DISEASE = 2
-    SHARE_KNOWLEDGE = 3
-    DISCOVER_CURE = 4
+    def __init__(self, value, command):
+        self.value = value
+        self.command = command
+
+    BUILD_RESEARCH_STATION = (1, "b")
+    TREAT_DISEASE = (2, "t")
+    SHARE_KNOWLEDGE = (3, "s")
+    DISCOVER_CURE = (4, "d")

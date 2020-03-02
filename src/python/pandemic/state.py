@@ -115,7 +115,9 @@ class State:
             player = self._players[player]
 
         city = player.get_city()
-        moves = set(map(lambda c: Movement(MovementAction.MOVE, c), self.get_neighbors(city)))
+        moves = set(
+            map(lambda c: Movement(MovementAction.DRIVE, c), self.get_neighbors(city))
+        )
         direct_flights = set(player.get_cards())
         direct_flights.remove(city)
         charter_flights = LOCATIONS.keys() if city in player.get_cards() else []
@@ -171,7 +173,7 @@ class State:
             player_deck_size=len(self._player_deck),
             infection_rate=self.infection_rate(),
             outbreaks=self._outbreaks,
-            min_cubes="%s:%s" % (min_cubes, self._cubes[min_cubes])
+            min_cubes="%s:%s" % (min_cubes, self._cubes[min_cubes]),
         )
 
     def _epidemic(self):
@@ -253,7 +255,9 @@ class State:
         # What is treatable?
         for virus, count in self.get_location(current_city).get_viral_state().items():
             if count > 0:
-                possible_actions.add(Other(OtherAction.TREAT_DISEASE, current_city, target_virus=virus))
+                possible_actions.add(
+                    Other(OtherAction.TREAT_DISEASE, current_city, target_virus=virus)
+                )
 
         # Can I build research station?
         # TODO: add research station and remove card
