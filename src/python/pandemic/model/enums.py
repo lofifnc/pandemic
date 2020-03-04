@@ -16,8 +16,7 @@ class Virus(Enum):
 
 
 class MovementAction(Enum):
-    def __init__(self, value, command):
-        self.value = value
+    def __init__(self, _, command):
         self.command = command
 
     DRIVE = (1, "d")
@@ -27,8 +26,7 @@ class MovementAction(Enum):
 
 
 class OtherAction(Enum):
-    def __init__(self, value, command):
-        self.value = value
+    def __init__(self, _, command):
         self.command = command
 
     BUILD_RESEARCH_STATION = (1, "b")

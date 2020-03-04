@@ -1,21 +1,21 @@
 # libraries
-from queue import Empty
-from typing import Dict, Callable
+from tkinter import *
+from typing import Dict
 
 import cartopy.crs as ccrs
 import matplotlib
 from matplotlib import patheffects
 from matplotlib.axes import Axes
-from matplotlib.backend_bases import key_press_handler, KeyEvent
-from matplotlib.figure import Figure
-
-from pandemic.model.location import Location
-from pandemic.state import LOCATIONS, State
-
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from tkinter import *
-from pandemic.state import CONNECTIONS
+from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from matplotlib.text import Text
+
+from pandemic.gui.autocomplete_entry import AutocompleteEntry
+from pandemic.model.enums import PlayerColor
+from pandemic.model.location import Location
+from pandemic.state import CONNECTIONS
+from pandemic.state import LOCATIONS
 
 FONT = {
     "family": "serif",
@@ -34,36 +34,28 @@ class Visualization:
     _canvas: FigureCanvasTkAgg
     _toolbar: NavigationToolbar2Tk
     _txt: Dict[str, Text]
+    _player: Dict[PlayerColor, Line2D]
     _ax: Axes
 
-    def __init__(self, simulation: Callable[[State], State], start_state: State):
+    def __init__(self):
         self._window = Tk()
         self._txt = {}
-        self._simulation = simulation
-        self._state = start_state
+        self._player = {}
+        self._text_var = StringVar()
+        # start plotting
         self.plot()
-        self._canvas.mpl_connect("key_press_event", self.on_key_event)
-
         self._window.mainloop()
-
-    def on_key_event(self, event: KeyEvent):
-        print(event)
-        print("you pressed %s" % event.key)
-        if event.key == "n":
-            self._state = self._simulation(self._state)
-            self.update_plot()
-        key_press_handler(event, self._canvas, self._toolbar)
 
     def plot(self):
         fig = matplotlib.figure.Figure()
         ax = fig.add_subplot(projection=ccrs.PlateCarree())
         ax.stock_img()
-
         self._canvas = FigureCanvasTkAgg(fig, master=self._window)
         self._canvas.draw()
-        self._canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
-        self._canvas._tkcanvas.pack(side=TOP, fill=BOTH, expand=1)
         self._toolbar = NavigationToolbar2Tk(self._canvas, self._window)
+        e1 = AutocompleteEntry(self.update_plot, self._window)
+        e1.pack(side=TOP, fill=X, expand=0)
+        self._canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
         self._toolbar.update()
 
         # Add a connections
@@ -99,23 +91,29 @@ class Visualization:
                 [patheffects.withStroke(linewidth=2, foreground="black")]
             )
 
-        for color, player in self._state.get_players().items():
-            location = self._state.get_location(player.get_city())
-            ax.plot(
+        for color, player in e1.simulation.state.get_players().items():
+            location = e1.simulation.state.get_location(player.get_city())
+            self._player[color] = ax.plot(
                 location.get_lon(),
                 location.get_lat(),
-                "o",
+                "v",
                 color=color.name.lower(),
                 transform=ccrs.Geodetic(),
-            )
+            )[0]
 
     @staticmethod
     def text_for_location(location: Location) -> str:
         return f"{location.get_name()} {location.format_infection_state()}"
 
-    def update_plot(self):
-        for city_id, location in self._state.get_locations().items():
+    def update_plot(self, state):
+        for city_id, location in state.get_locations().items():
             text = Visualization.text_for_location(location)
             self._txt[city_id].set_text(text)
+
+        for color, player in state.get_players().items():
+            location = state.get_location(player.get_city())
+            print(self._player[color])
+            self._player[color].set_xdata(location.get_lon())
+            self._player[color].set_ydata(location.get_lat())
 
         self._canvas.draw()

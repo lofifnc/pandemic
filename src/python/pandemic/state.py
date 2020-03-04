@@ -21,12 +21,7 @@ class State:
             PlayerColor.WHITE: PLAYER_START,
         }
 
-        self._cubes = {
-            Virus.YELLOW: 24,
-            Virus.BLACK: 24,
-            Virus.BLUE: 24,
-            Virus.RED: 24,
-        }
+        self._cubes = {Virus.YELLOW: 24, Virus.BLACK: 24, Virus.BLUE: 24, Virus.RED: 24}
 
         self._players = {
             PlayerColor.RED: Player(),
@@ -35,7 +30,7 @@ class State:
             PlayerColor.WHITE: Player(),
         }
 
-        self._active_player = PlayerColor.RED
+        self._active_player: PlayerColor = PlayerColor.RED
         self._player_actions = PLAYER_ACTIONS
 
         self._outbreaks = 0
@@ -105,6 +100,8 @@ class State:
         else:
             self.draw_player_cards()
             self.infect()
+            self._active_player = PlayerColor(self._active_player.value + 1 % len(self._players))
+            self._player_actions = PLAYER_ACTIONS
 
         return self.get_possible_moves()
 
@@ -119,7 +116,11 @@ class State:
             map(lambda c: Movement(MovementAction.DRIVE, c), self.get_neighbors(city))
         )
         direct_flights = set(player.get_cards())
-        direct_flights.remove(city)
+        try:
+            direct_flights.remove(city)
+        except KeyError:
+            # dont care if player has not own city
+            pass
         charter_flights = LOCATIONS.keys() if city in player.get_cards() else []
         return moves  # TODO: only direct moves for the moment
 
@@ -165,11 +166,13 @@ class State:
     def report(self) -> str:
         min_cubes = min(self._cubes, key=self._cubes.get)
         return (
+            "active_player={active_player},"
             "player_cards_left={player_deck_size},"
             "infection_rate={infection_rate},"
             "outbreaks={outbreaks},"
             "min_cubes={min_cubes}"
         ).format(
+            active_player="%s:%s" % (self._active_player, self._player_actions),
             player_deck_size=len(self._player_deck),
             infection_rate=self.infection_rate(),
             outbreaks=self._outbreaks,
