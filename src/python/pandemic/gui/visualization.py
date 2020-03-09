@@ -25,10 +25,7 @@ FONT = {
     # "backgroundcolor": "black"
 }
 
-FONT_VIRUS = {
-    "size": 6,
-    "backgroundcolor": "white"
-}
+FONT_VIRUS = {"size": 6, "backgroundcolor": "white"}
 
 
 matplotlib.use("TkAgg")
@@ -66,14 +63,14 @@ class Visualization:
 
         frame = Frame(self._window)
         frame.pack(side=TOP)
-        player_cards_label = Label(frame, text="[%s]" % " ".join(state.get_player_cards()))
+        player_cards_label = Label(
+            frame, text="[%s]" % " ".join(state.get_player_cards())
+        )
         player_cards_label.pack(side=LEFT)
         state_label = Label(frame, text=state.report())
         state_label.pack(side=LEFT)
         self._canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
         self._toolbar.update()
-
-
 
         # Add a connections
         for conn in CONNECTIONS:
@@ -126,9 +123,19 @@ class Visualization:
 
         for idx, (virus, count) in enumerate(location.get_viral_state().items()):
             if count > 0:
-                m = ax.text(lon, lat, count, color=virus.name.lower(), transform=ccrs.Geodetic(), horizontalalignment="center", fontdict=FONT_VIRUS, bbox={"pad": 1.5, "color": "white"})
+                m = ax.text(
+                    lon,
+                    lat,
+                    count,
+                    color=virus.name.lower(),
+                    transform=ccrs.Geodetic(),
+                    horizontalalignment="center",
+                    fontdict=FONT_VIRUS,
+                    bbox={"pad": 1.5, "color": "white"},
+                )
                 m.set_path_effects(
-                    [patheffects.withStroke(linewidth=1, foreground="black")])
+                    [patheffects.withStroke(linewidth=1, foreground="black")]
+                )
 
     @staticmethod
     def text_for_location(location: Location) -> str:

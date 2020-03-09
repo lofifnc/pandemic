@@ -100,7 +100,9 @@ class State:
         else:
             self.draw_player_cards()
             self.infect()
-            self._active_player = PlayerColor(self._active_player.value + 1 % len(self._players))
+            self._active_player = PlayerColor(
+                self._active_player.value + 1 % len(self._players)
+            )
             self._player_actions = PLAYER_ACTIONS
 
         return self.get_possible_moves()
@@ -166,13 +168,16 @@ class State:
     def report(self) -> str:
         min_cubes = min(self._cubes, key=self._cubes.get)
         return " ".join(
-            ["active_player={active_player},",
-             "player_deck_size={player_deck_size},",
-             "infection_rate={infection_rate},",
-             "outbreaks={outbreaks},",
-             "min_cubes={min_cubes}", ]
+            [
+                "active_player={active_player},",
+                "player_deck_size={player_deck_size},",
+                "infection_rate={infection_rate},",
+                "outbreaks={outbreaks},",
+                "min_cubes={min_cubes}",
+            ]
         ).format(
-            active_player="%s:%s" % (self._active_player.name.lower(), self._player_actions),
+            active_player="%s:%s"
+            % (self._active_player.name.lower(), self._player_actions),
             player_deck_size=len(self._player_deck),
             infection_rate=self.infection_rate(),
             outbreaks=self._outbreaks,
