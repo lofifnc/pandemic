@@ -165,18 +165,18 @@ class State:
 
     def report(self) -> str:
         min_cubes = min(self._cubes, key=self._cubes.get)
-        return (
-            "active_player={active_player},"
-            "player_cards_left={player_deck_size},"
-            "infection_rate={infection_rate},"
-            "outbreaks={outbreaks},"
-            "min_cubes={min_cubes}"
+        return " ".join(
+            ["active_player={active_player},",
+             "player_deck_size={player_deck_size},",
+             "infection_rate={infection_rate},",
+             "outbreaks={outbreaks},",
+             "min_cubes={min_cubes}", ]
         ).format(
-            active_player="%s:%s" % (self._active_player, self._player_actions),
+            active_player="%s:%s" % (self._active_player.name.lower(), self._player_actions),
             player_deck_size=len(self._player_deck),
             infection_rate=self.infection_rate(),
             outbreaks=self._outbreaks,
-            min_cubes="%s:%s" % (min_cubes, self._cubes[min_cubes]),
+            min_cubes="%s:%s" % (min_cubes.name, self._cubes[min_cubes]),
         )
 
     def _epidemic(self):
@@ -201,6 +201,14 @@ class State:
                 logging.info("you lost no more cards")
                 return []
         return drawn_cards
+
+    def get_player_cards(self, player: PlayerColor = None):
+        if player is None:
+            player = self._active_player
+        return self._players[player].get_cards()
+
+    def get_actions_left(self):
+        return self._player_actions
 
     """
     Function to simulate outbreaks

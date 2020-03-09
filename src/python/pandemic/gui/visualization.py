@@ -12,7 +12,7 @@ from matplotlib.lines import Line2D
 from matplotlib.text import Text
 
 from pandemic.gui.autocomplete_entry import AutocompleteEntry
-from pandemic.model.enums import PlayerColor
+from pandemic.model.enums import PlayerColor, Virus
 from pandemic.model.location import Location
 from pandemic.state import CONNECTIONS
 from pandemic.state import LOCATIONS
@@ -23,6 +23,11 @@ FONT = {
     "weight": "bold",
     "size": 6,
     # "backgroundcolor": "black"
+}
+
+FONT_VIRUS = {
+    "size": 6,
+    "backgroundcolor": "white"
 }
 
 
@@ -47,16 +52,28 @@ class Visualization:
         self._window.mainloop()
 
     def plot(self):
-        fig = matplotlib.figure.Figure()
+        fig = matplotlib.figure.Figure(frameon=False)
         ax = fig.add_subplot(projection=ccrs.PlateCarree())
+        ax.axis("off")
         ax.stock_img()
         self._canvas = FigureCanvasTkAgg(fig, master=self._window)
         self._canvas.draw()
         self._toolbar = NavigationToolbar2Tk(self._canvas, self._window)
         e1 = AutocompleteEntry(self.update_plot, self._window)
         e1.pack(side=TOP, fill=X, expand=0)
+
+        state = e1.simulation.state
+
+        frame = Frame(self._window)
+        frame.pack(side=TOP)
+        player_cards_label = Label(frame, text="[%s]" % " ".join(state.get_player_cards()))
+        player_cards_label.pack(side=LEFT)
+        state_label = Label(frame, text=state.report())
+        state_label.pack(side=LEFT)
         self._canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
         self._toolbar.update()
+
+
 
         # Add a connections
         for conn in CONNECTIONS:
@@ -80,6 +97,8 @@ class Visualization:
                 transform=ccrs.Geodetic(),
             )
 
+            self.draw_virus_state(location, ax)
+
             self._txt[city_id] = ax.text(
                 location.get_lon() + 0.5,
                 location.get_lat() + 0.5,
@@ -91,8 +110,8 @@ class Visualization:
                 [patheffects.withStroke(linewidth=2, foreground="black")]
             )
 
-        for color, player in e1.simulation.state.get_players().items():
-            location = e1.simulation.state.get_location(player.get_city())
+        for color, player in state.get_players().items():
+            location = state.get_location(player.get_city())
             self._player[color] = ax.plot(
                 location.get_lon(),
                 location.get_lat(),
@@ -100,6 +119,16 @@ class Visualization:
                 color=color.name.lower(),
                 transform=ccrs.Geodetic(),
             )[0]
+
+    def draw_virus_state(self, location: Location, ax: Axes):
+        lon = location.get_lon()
+        lat = location.get_lat() - 8
+
+        for idx, (virus, count) in enumerate(location.get_viral_state().items()):
+            if count > 0:
+                m = ax.text(lon, lat, count, color=virus.name.lower(), transform=ccrs.Geodetic(), horizontalalignment="center", fontdict=FONT_VIRUS, bbox={"pad": 1.5, "color": "white"})
+                m.set_path_effects(
+                    [patheffects.withStroke(linewidth=1, foreground="black")])
 
     @staticmethod
     def text_for_location(location: Location) -> str:
