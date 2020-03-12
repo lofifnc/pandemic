@@ -105,9 +105,12 @@ class State:
             )
             self._player_actions = PLAYER_ACTIONS
 
-        return self.get_possible_moves()
+        return self.get_possible_actions()
 
-    def get_possible_moves(self, player=None) -> Set[Movement]:
+    def get_possible_actions(self, player: PlayerColor = None) -> Set[ActionInterface]:
+        return self.get_possible_move_actions(player).union(self.get_possible_other_actions(player))
+
+    def get_possible_move_actions(self, player: PlayerColor = None) -> Set[Movement]:
         if player is None:
             player = self._players[self._active_player]
         else:
@@ -117,14 +120,25 @@ class State:
         moves = set(
             map(lambda c: Movement(MovementAction.DRIVE, c), self.get_neighbors(city))
         )
-        direct_flights = set(player.get_cards())
+        direct_flights = set(
+            map(
+                lambda c: Movement(MovementAction.DIRECT_FLIGHT, c),
+                set(player.get_cards()),
+            )
+        )
         try:
             direct_flights.remove(city)
         except KeyError:
             # dont care if player has not own city
             pass
-        charter_flights = LOCATIONS.keys() if city in player.get_cards() else []
-        return moves  # TODO: only direct moves for the moment
+        charter_flights = set(
+            map(
+                lambda c: Movement(MovementAction.DIRECT_FLIGHT, c),
+                LOCATIONS.keys() if city in player.get_cards() else [],
+            )
+        )
+        # TODO shuttle flights from and to research
+        return moves.union(direct_flights).union(charter_flights)
 
     def get_neighbors(self, city: str) -> Set[str]:
         return self.get_location(city).get_neighbors()
@@ -177,7 +191,7 @@ class State:
             ]
         ).format(
             active_player="%s:%s"
-            % (self._active_player.name.lower(), self._player_actions),
+                          % (self._active_player.name.lower(), self._player_actions),
             player_deck_size=len(self._player_deck),
             infection_rate=self.infection_rate(),
             outbreaks=self._outbreaks,
@@ -259,7 +273,7 @@ class State:
             # TODO: move cards around
             pass
 
-    def get_possible_actions(self, player: PlayerColor = None):
+    def get_possible_other_actions(self, player: PlayerColor = None) -> Set[Other]:
         if player is None:
             player = self._players[self._active_player]
         else:
@@ -277,12 +291,10 @@ class State:
 
         # Can I build research station?
         # TODO: add research station and remove card
-        pass
 
         # Can I discover a cure at this situation?
         # TODO: create cure and discover cards
-        pass
 
         # Can I discover a cure at this situation?
         # TODO: move cards around
-        pass
+        return possible_actions

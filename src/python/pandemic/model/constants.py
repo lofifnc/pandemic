@@ -5,12 +5,18 @@ LOCATIONS = {
     "algiers": Location("Algiers", 36.7753606, 3.0601882, Virus.BLUE),
     "atlanta": Location("Atlanta", 33.7490987, -84.3901849, Virus.BLUE),
     "baghdad": Location("Baghdad", 33.3024309, 44.3787992, Virus.BLACK),
-    "bangkok": Location("Bangkok", 13.7542529, 100.493087, Virus.RED),
-    "beijing": Location("Beijing", 39.906217, 116.3912757, Virus.RED),
+    "bangkok": Location(
+        "Bangkok", 13.7542529, 100.493087, Virus.RED, text_alignment="right"
+    ),
+    "beijing": Location(
+        "Beijing", 39.906217, 116.3912757, Virus.RED, text_alignment="right"
+    ),
     "bogota": Location("Bogota", 4.59808, -74.0760439, Virus.YELLOW),
     "buenos_aries": Location("Buenos Aries", -34.6546138, -58.4155345, Virus.YELLOW),
     "cairo": Location("Cairo", 30.048819, 31.243666, Virus.BLACK),
-    "chennai": Location("Chennai", 13.0801721, 80.2838331, Virus.BLACK),
+    "chennai": Location(
+        "Chennai", 13.0801721, 80.2838331, Virus.BLACK, text_alignment="right"
+    ),
     "chicago": Location("Chicago", 41.8755616, -87.6244212, Virus.BLUE),
     "delhi": Location("Delhi", 28.6517178, 77.2219388, Virus.BLACK),
     "essen": Location("Essen", 51.4582235, 7.0158171, Virus.BLUE),
@@ -27,7 +33,9 @@ LOCATIONS = {
     "kolkata": Location("Kolkata", 22.5677459, 88.3476023, Virus.BLACK),
     "lagos": Location("Lagos", 6.4550575, 3.3941795, Virus.YELLOW),
     "lima": Location("Lima", -12.0621065, -77.0365256, Virus.YELLOW),
-    "london": Location("London", 51.5073219, -0.1276474, Virus.BLUE),
+    "london": Location(
+        "London", 51.5073219, -0.1276474, Virus.BLUE, text_alignment="right"
+    ),
     "los_angeles": Location("Los Angeles", 34.0536909, -118.2427666, Virus.YELLOW),
     "madrid": Location("Madrid", 40.4167047, -3.7035825, Virus.BLUE),
     "manila": Location("Manila", 14.5906216, 120.9799696, Virus.RED),
@@ -36,16 +44,24 @@ LOCATIONS = {
     "milan": Location("Milan", 45.4668, 9.1905, Virus.BLUE),
     "montreal": Location("Montreal", 45.4972159, -73.6103642, Virus.BLUE),
     "moscow": Location("Moscow", 55.7504461, 37.6174943, Virus.BLACK),
-    "mumbai": Location("Mumbai", 18.9387711, 72.8353355, Virus.BLACK),
+    "mumbai": Location(
+        "Mumbai", 18.9387711, 72.8353355, Virus.BLACK, text_alignment="right"
+    ),
     "new_york": Location("New York", 40.7127281, -74.0060152, Virus.BLUE),
-    "osaka": Location("Osaka", 34.6198813, 135.490357, Virus.RED),
+    "osaka": Location(
+        "Osaka", 34.6198813, 135.490357, Virus.RED, text_alignment="right"
+    ),
     "paris": Location("Paris", 48.8566969, 2.3514616, Virus.BLUE),
     "riyadh": Location("Riyadh", 24.6319692, 46.7150648, Virus.BLACK),
     "san_francisco": Location("San Francisco", 37.7790262, -122.4199061, Virus.BLUE),
-    "santiago": Location("Santiago", 9.8694792, -83.7980749, Virus.YELLOW),
+    "santiago": Location("Santiago", -33.45, -70.666667, Virus.YELLOW),
     "sao_paulo": Location("Sao Paulo", -23.5506507, -46.6333824, Virus.YELLOW),
-    "seoul": Location("Seoul", 37.5649826, 126.9392108, Virus.RED),
-    "shanghai": Location("Shanghai", 31.2252985, 121.4890497, Virus.RED),
+    "seoul": Location(
+        "Seoul", 37.5649826, 126.9392108, Virus.RED, text_alignment="right"
+    ),
+    "shanghai": Location(
+        "Shanghai", 31.2252985, 121.4890497, Virus.RED, text_alignment="right"
+    ),
     "st_petersburg": Location("St. Petersburg", 59.938732, 30.316229, Virus.BLUE),
     "sydney": Location("Sydney", -33.8548157, 151.2164539, Virus.RED),
     "taipei": Location("Taipei", 25.0375198, 121.5636796, Virus.RED),

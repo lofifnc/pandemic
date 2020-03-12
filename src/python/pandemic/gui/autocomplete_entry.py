@@ -1,4 +1,3 @@
-from collections import Set
 from tkinter import *
 import re
 from typing import List, Callable

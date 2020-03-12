@@ -4,7 +4,9 @@ from pandemic.model.enums import Virus
 
 
 class Location:
-    def __init__(self, name: str, lat: float, lon: float, color: Virus):
+    def __init__(
+        self, name: str, lat: float, lon: float, color: Virus, text_alignment="left"
+    ):
         self._name = name
         self._lat = lat
         self._lon = lon
@@ -14,6 +16,7 @@ class Location:
             Virus.YELLOW: 0,
             Virus.BLACK: 0,
         }
+        self.text_alignment = text_alignment
         assert isinstance(color, Virus)
         self._color = color
         self._neighbors: Set[str] = set()
@@ -80,6 +83,9 @@ class Location:
         if self._viral_state[Virus.YELLOW] > 0:
             state += f"ye{self._viral_state[Virus.YELLOW]} "
         return state
+
+    def get_text_offset(self):
+        return 2 if self.text_alignment == "left" else -2
 
     def __str__(self):
         return f"{self._name} {self._lat}:{self._lon}"

@@ -19,6 +19,6 @@ class Simulation:
 
     def get_possible_moves(self) -> Set[str]:
         self._moves = {
-            move.to_command(): move for move in self.state.get_possible_moves()
+            move.to_command(): move for move in self.state.get_possible_actions()
         }
         return set(self._moves.keys())

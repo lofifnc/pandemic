@@ -1,6 +1,6 @@
 # libraries
 from tkinter import *
-from typing import Dict
+from typing import Dict, List
 
 import cartopy.crs as ccrs
 import matplotlib
@@ -10,11 +10,13 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from matplotlib.text import Text
+from matplotlib import transforms
+from collections import defaultdict
 
 from pandemic.gui.autocomplete_entry import AutocompleteEntry
 from pandemic.model.enums import PlayerColor, Virus
 from pandemic.model.location import Location
-from pandemic.state import CONNECTIONS
+from pandemic.state import CONNECTIONS, State
 from pandemic.state import LOCATIONS
 
 FONT = {
@@ -25,26 +27,27 @@ FONT = {
     # "backgroundcolor": "black"
 }
 
-FONT_VIRUS = {"size": 6, "backgroundcolor": "white"}
-
+FONT_VIRUS = {"size": 6, "backgroundcolor": "white", "weight": "bold"}
 
 matplotlib.use("TkAgg")
 
 
 class Visualization:
-
     _canvas: FigureCanvasTkAgg
     _toolbar: NavigationToolbar2Tk
     _txt: Dict[str, Text]
     _player: Dict[PlayerColor, Line2D]
     _ax: Axes
+    _player_cards_label: Label
+    _state_label: Label
 
     def __init__(self):
         self._window = Tk()
         self._txt = {}
         self._player = {}
         self._text_var = StringVar()
-        # start plotting
+        self._virus_marker: Dict[str, List[Line2D]] = defaultdict(list)
+        # == start plotting ==
         self.plot()
         self._window.mainloop()
 
@@ -63,12 +66,12 @@ class Visualization:
 
         frame = Frame(self._window)
         frame.pack(side=TOP)
-        player_cards_label = Label(
+        self._player_cards_label = Label(
             frame, text="[%s]" % " ".join(state.get_player_cards())
         )
-        player_cards_label.pack(side=LEFT)
-        state_label = Label(frame, text=state.report())
-        state_label.pack(side=LEFT)
+        self._player_cards_label.pack(side=LEFT)
+        self._state_label = Label(frame, text=state.report())
+        self._state_label.pack(side=LEFT)
         self._canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
         self._toolbar.update()
 
@@ -86,26 +89,30 @@ class Visualization:
             )
 
         for city_id, location in LOCATIONS.items():
-            ax.plot(
+            city: Line2D = ax.plot(
                 location.get_lon(),
                 location.get_lat(),
                 "o",
                 color=location.get_display_color(),
                 transform=ccrs.Geodetic(),
-            )
+            )[0]
 
-            self.draw_virus_state(location, ax)
+            Visualization.add_path_effect(city)
+            t = transforms.offset_copy(
+                city.get_transform(), x=location.get_text_offset(), y=2, units="dots"
+            )
 
             self._txt[city_id] = ax.text(
-                location.get_lon() + 0.5,
-                location.get_lat() + 0.5,
-                Visualization.text_for_location(location),
+                location.get_lon(),
+                location.get_lat(),
+                location.get_name(),
                 fontdict=FONT,
-                transform=ccrs.Geodetic(),
+                transform=t,
+                horizontalalignment=location.text_alignment,
             )
-            self._txt[city_id].set_path_effects(
-                [patheffects.withStroke(linewidth=2, foreground="black")]
-            )
+            Visualization.add_path_effect(self._txt[city_id])
+
+            self.draw_virus_state(city_id, location, city, ax)
 
         for color, player in state.get_players().items():
             location = state.get_location(player.get_city())
@@ -117,38 +124,52 @@ class Visualization:
                 transform=ccrs.Geodetic(),
             )[0]
 
-    def draw_virus_state(self, location: Location, ax: Axes):
-        lon = location.get_lon()
-        lat = location.get_lat() - 8
+    @staticmethod
+    def add_path_effect(line):
+        color = "black" if line.get_color() != "black" else "white"
+        line.set_path_effects([patheffects.withStroke(linewidth=2, foreground=color)])
 
-        for idx, (virus, count) in enumerate(location.get_viral_state().items()):
-            if count > 0:
-                m = ax.text(
-                    lon,
-                    lat,
-                    count,
-                    color=virus.name.lower(),
-                    transform=ccrs.Geodetic(),
-                    horizontalalignment="center",
-                    fontdict=FONT_VIRUS,
-                    bbox={"pad": 1.5, "color": "white"},
+    def draw_virus_state(
+        self, city_id: str, location: Location, city: Line2D, ax: Axes
+    ):
+        lon = location.get_lon()
+        lat = location.get_lat()
+
+        for idx, virus in enumerate(location.get_viral_state().keys()):
+            for i in range(0, 3):
+                t = transforms.offset_copy(
+                    city.get_transform(), x=-8 + i * 8, y=-10 + idx * -8, units="dots"
                 )
-                m.set_path_effects(
-                    [patheffects.withStroke(linewidth=1, foreground="black")]
-                )
+                vm = ax.plot(lon, lat, "x", transform=t, visible=False)[0]
+                Visualization.add_path_effect(vm)
+                self._virus_marker[city_id].append(vm)
+
+        self.update_virus_state(city_id, location)
+
+    def update_virus_state(self, city_id: str, location: Location):
+
+        city_marker = self._virus_marker[city_id]
+        [m.set_visible(False) for m in city_marker]
+        i = 0
+        for virus, count in location.get_viral_state().items():
+            for _ in range(0, count):
+                city_marker[i].set_visible(True)
+                city_marker[i].set_color(virus.name.lower())
+                i += 1
 
     @staticmethod
     def text_for_location(location: Location) -> str:
         return f"{location.get_name()} {location.format_infection_state()}"
 
-    def update_plot(self, state):
+    def update_plot(self, state: State):
+        self._player_cards_label["text"] = "[%s]" % " ".join(state.get_player_cards())
+        self._state_label["text"] = state.report()
+
         for city_id, location in state.get_locations().items():
-            text = Visualization.text_for_location(location)
-            self._txt[city_id].set_text(text)
+            self.update_virus_state(city_id, location)
 
         for color, player in state.get_players().items():
             location = state.get_location(player.get_city())
-            print(self._player[color])
             self._player[color].set_xdata(location.get_lon())
             self._player[color].set_ydata(location.get_lat())
 
