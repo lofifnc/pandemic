@@ -8,11 +8,11 @@ class Player:
         self._city = PLAYER_START
         self._cards: List[str] = []
 
-    def get_city(self) -> str:
+    def get_city_id(self) -> str:
         return self._city
 
-    def set_city(self, city: str):
-        self._city = city
+    def set_city(self, city_id: str):
+        self._city = city_id
 
     def get_cards(self) -> List[str]:
         return self._cards.copy()

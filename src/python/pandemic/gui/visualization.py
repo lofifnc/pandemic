@@ -15,9 +15,13 @@ from collections import defaultdict
 
 from pandemic.gui.autocomplete_entry import AutocompleteEntry
 from pandemic.model.enums import PlayerColor, Virus
-from pandemic.model.location import Location
+from pandemic.model.city import City
 from pandemic.state import CONNECTIONS, State
-from pandemic.state import LOCATIONS
+from pandemic.state import CITIES
+
+RESEARCH_LAT = -50
+
+RESEARCH_LON = 0
 
 FONT = {
     "family": "serif",
@@ -28,6 +32,7 @@ FONT = {
 }
 
 FONT_VIRUS = {"size": 6, "backgroundcolor": "white", "weight": "bold"}
+FONT_RESEARCH = {"size": 10, "backgroundcolor": "white", "weight": "bold"}
 
 matplotlib.use("TkAgg")
 
@@ -52,10 +57,12 @@ class Visualization:
         self._window.mainloop()
 
     def plot(self):
-        fig = matplotlib.figure.Figure(frameon=False)
-        ax = fig.add_subplot(projection=ccrs.PlateCarree())
-        ax.axis("off")
-        ax.stock_img()
+        fig = matplotlib.figure.Figure(frameon=False, figsize=(100, 100))
+        self._ax = fig.add_axes([0, 0, 1, 1], projection=ccrs.PlateCarree())
+        self._ax.background_patch.set_visible(False)
+        self._ax.outline_patch.set_visible(False)
+        self._ax.axis("off")
+        self._ax.stock_img()
         self._canvas = FigureCanvasTkAgg(fig, master=self._window)
         self._canvas.draw()
         self._toolbar = NavigationToolbar2Tk(self._canvas, self._window)
@@ -75,12 +82,22 @@ class Visualization:
         self._canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=1)
         self._toolbar.update()
 
-        # Add a connections
-        for conn in CONNECTIONS:
-            start = LOCATIONS[conn[0]]
-            end = LOCATIONS[conn[1]]
+        research_text = self._ax.text(
+            RESEARCH_LON,
+            RESEARCH_LAT,
+            "Research Stations",
+            fontdict=FONT_RESEARCH,
+            transform=ccrs.Geodetic(),
+            horizontalalignment="center",
+        )
+        Visualization.add_path_effect(research_text)
 
-            ax.plot(
+        # Add connections
+        for conn in CONNECTIONS:
+            start = CITIES[conn[0]]
+            end = CITIES[conn[1]]
+
+            self._ax.plot(
                 [start.get_lon(), end.get_lon()],
                 [start.get_lat(), end.get_lat()],
                 color="gray",
@@ -88,8 +105,8 @@ class Visualization:
                 transform=ccrs.Geodetic(),
             )
 
-        for city_id, location in LOCATIONS.items():
-            city: Line2D = ax.plot(
+        for city_id, location in CITIES.items():
+            city: Line2D = self._ax.plot(
                 location.get_lon(),
                 location.get_lat(),
                 "o",
@@ -102,7 +119,7 @@ class Visualization:
                 city.get_transform(), x=location.get_text_offset(), y=2, units="dots"
             )
 
-            self._txt[city_id] = ax.text(
+            self._txt[city_id] = self._ax.text(
                 location.get_lon(),
                 location.get_lat(),
                 location.get_name(),
@@ -112,14 +129,16 @@ class Visualization:
             )
             Visualization.add_path_effect(self._txt[city_id])
 
-            self.draw_virus_state(city_id, location, city, ax)
+            self.draw_virus_state(city_id, location, city)
+            self.mark_research_station(location)
 
         for color, player in state.get_players().items():
-            location = state.get_location(player.get_city())
-            self._player[color] = ax.plot(
+            location = state.get_city(player.get_city_id())
+            self._player[color] = self._ax.plot(
                 location.get_lon(),
                 location.get_lat(),
-                "v",
+                "d",
+                markersize=9,
                 color=color.name.lower(),
                 transform=ccrs.Geodetic(),
             )[0]
@@ -129,9 +148,7 @@ class Visualization:
         color = "black" if line.get_color() != "black" else "white"
         line.set_path_effects([patheffects.withStroke(linewidth=2, foreground=color)])
 
-    def draw_virus_state(
-        self, city_id: str, location: Location, city: Line2D, ax: Axes
-    ):
+    def draw_virus_state(self, city_id: str, location: City, city: Line2D):
         lon = location.get_lon()
         lat = location.get_lat()
 
@@ -140,13 +157,13 @@ class Visualization:
                 t = transforms.offset_copy(
                     city.get_transform(), x=-8 + i * 8, y=-10 + idx * -8, units="dots"
                 )
-                vm = ax.plot(lon, lat, "x", transform=t, visible=False)[0]
+                vm = self._ax.plot(lon, lat, "x", transform=t, visible=False)[0]
                 Visualization.add_path_effect(vm)
                 self._virus_marker[city_id].append(vm)
 
         self.update_virus_state(city_id, location)
 
-    def update_virus_state(self, city_id: str, location: Location):
+    def update_virus_state(self, city_id: str, location: City):
 
         city_marker = self._virus_marker[city_id]
         [m.set_visible(False) for m in city_marker]
@@ -158,19 +175,30 @@ class Visualization:
                 i += 1
 
     @staticmethod
-    def text_for_location(location: Location) -> str:
+    def text_for_location(location: City) -> str:
         return f"{location.get_name()} {location.format_infection_state()}"
 
     def update_plot(self, state: State):
         self._player_cards_label["text"] = "[%s]" % " ".join(state.get_player_cards())
         self._state_label["text"] = state.report()
 
-        for city_id, location in state.get_locations().items():
+        for city_id, location in state.get_cities().items():
             self.update_virus_state(city_id, location)
 
         for color, player in state.get_players().items():
-            location = state.get_location(player.get_city())
+            location = state.get_city(player.get_city_id())
             self._player[color].set_xdata(location.get_lon())
             self._player[color].set_ydata(location.get_lat())
+            self.mark_research_station(location)
 
         self._canvas.draw()
+
+    def mark_research_station(self, location: City):
+        if location.has_research_station():
+            self._ax.plot(
+                [location.get_lon(), RESEARCH_LON],
+                [location.get_lat(), RESEARCH_LAT],
+                color="white",
+                linestyle="-",
+                # transform=ccrs.Geodetic(),
+            )

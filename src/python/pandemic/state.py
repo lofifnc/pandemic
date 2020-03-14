@@ -9,51 +9,44 @@ import logging
 
 from pandemic.model.constants import *
 from pandemic.model.player import Player
-
+from collections import Counter
 
 class State:
     def __init__(self):
 
-        self._player_locations = {
-            PlayerColor.BLUE: PLAYER_START,
-            PlayerColor.GREEN: PLAYER_START,
-            PlayerColor.RED: PLAYER_START,
-            PlayerColor.WHITE: PLAYER_START,
+        # players
+        self._players: Dict[PlayerColor, Player] = {
+            PlayerColor(n): Player() for n in range(1, PLAYER_COUNT + 1)
         }
 
-        self._cubes = {Virus.YELLOW: 24, Virus.BLACK: 24, Virus.BLUE: 24, Virus.RED: 24}
+        self._active_player: PlayerColor = list(self._players.keys())[0]
 
-        self._players = {
-            PlayerColor.RED: Player(),
-            PlayerColor.BLUE: Player(),
-            PlayerColor.GREEN: Player(),
-            PlayerColor.WHITE: Player(),
-        }
-
-        self._active_player: PlayerColor = PlayerColor.RED
-        self._player_actions = PLAYER_ACTIONS
-
+        # counters
+        self._research_stations = 5
         self._outbreaks = 0
         self._infection_rate_marker = 0
+        self._cubes = {Virus.YELLOW: 24, Virus.BLACK: 24, Virus.BLUE: 24, Virus.RED: 24}
+        self._player_actions = PLAYER_ACTIONS
 
-        self._infection_deck: List[str] = list(LOCATIONS.keys())
+        # cards
+        self._infection_deck: List[str] = list(CITIES.keys())
         shuffle(self._infection_deck)
         self._infection_discard_pile: List[str] = []
 
-        self._player_deck: List[str] = list(LOCATIONS.keys())
+        self._player_deck: List[str] = list(CITIES.keys())
         shuffle(self._player_deck)
         self._serve_player_cards()
         self._prepare_player_deck()
         self._player_discard_pile: List[str] = []
 
-        self._locations = LOCATIONS.copy()
+        self._cities = CITIES.copy()
         self._add_neighbors_to_locations()
 
+        # infection
         self._init_infection_markers()
 
     def _init_infection_markers(self):
         for i in range(3, 0, -1):
-            print(i)
             self.__draw_and_infect(i)
 
     def __draw_and_infect(self, num_infections: int):
@@ -62,26 +55,26 @@ class State:
             self._infect_city(top_card, times=num_infections)
             self._infection_discard_pile.append(top_card)
 
-    def _infect_city(self, city: str, color: Virus = None, times: int = 1) -> bool:
+    def _infect_city(self, city_id: str, color: Virus = None, times: int = 1) -> bool:
         outbreak = False
-        location = self.get_location(city)
+        location = self.get_city(city_id)
         if color is None:
             color = location.get_color()
         for _ in itertools.repeat(None, times):
-            outbreak = self.get_location(city).inc_infection(color)
+            outbreak = self.get_city(city_id).inc_infection(color)
             if outbreak:
                 break
             self._cubes[color] -= 1
 
         return outbreak
 
-    def _treat_city(self, city: str, color: Virus = None, times: int = 1) -> bool:
+    def _treat_city(self, city_id: str, color: Virus = None, times: int = 1) -> bool:
         is_empty = False
-        location = self.get_location(city)
+        location = self.get_city(city_id)
         if color is None:
             color = location.get_color()
         for _ in itertools.repeat(None, times):
-            is_empty = self.get_location(city).dec_infection(color)
+            is_empty = self.get_city(city_id).dec_infection(color)
             if is_empty:
                 break
             self._cubes[color] += 1
@@ -89,15 +82,13 @@ class State:
         return is_empty
 
     def turn(self, action: ActionInterface) -> Set[ActionInterface]:
-        if self._player_actions > 1:
+        if self._player_actions > 0:
             if isinstance(action, Movement):
-                # TODO: check if move possible
-                self.move_player(action.destination)
+                self.move_player(action)
             elif isinstance(action, Other):
                 self.other_action(action)
             self._player_actions -= 1
-
-        else:
+        if self._player_actions == 0:
             self.draw_player_cards()
             self.infect()
             self._active_player = PlayerColor(
@@ -108,40 +99,12 @@ class State:
         return self.get_possible_actions()
 
     def get_possible_actions(self, player: PlayerColor = None) -> Set[ActionInterface]:
-        return self.get_possible_move_actions(player).union(self.get_possible_other_actions(player))
-
-    def get_possible_move_actions(self, player: PlayerColor = None) -> Set[Movement]:
-        if player is None:
-            player = self._players[self._active_player]
-        else:
-            player = self._players[player]
-
-        city = player.get_city()
-        moves = set(
-            map(lambda c: Movement(MovementAction.DRIVE, c), self.get_neighbors(city))
+        return self.get_possible_move_actions(player).union(
+            self.get_possible_other_actions(player)
         )
-        direct_flights = set(
-            map(
-                lambda c: Movement(MovementAction.DIRECT_FLIGHT, c),
-                set(player.get_cards()),
-            )
-        )
-        try:
-            direct_flights.remove(city)
-        except KeyError:
-            # dont care if player has not own city
-            pass
-        charter_flights = set(
-            map(
-                lambda c: Movement(MovementAction.DIRECT_FLIGHT, c),
-                LOCATIONS.keys() if city in player.get_cards() else [],
-            )
-        )
-        # TODO shuttle flights from and to research
-        return moves.union(direct_flights).union(charter_flights)
 
-    def get_neighbors(self, city: str) -> Set[str]:
-        return self.get_location(city).get_neighbors()
+    def get_neighbors(self, city_id: str) -> Set[str]:
+        return self.get_city(city_id).get_neighbors()
 
     def _prepare_player_deck(self):
         prepared_deck: List[str] = []
@@ -158,17 +121,16 @@ class State:
     def _add_neighbors_to_locations(self):
         for con in CONNECTIONS:
             start, end = con[0], con[1]
-            self._locations[start].add_neighbor(end)
-            self._locations[end].add_neighbor(start)
+            self._cities[start].add_neighbor(end)
+            self._cities[end].add_neighbor(start)
 
-    def get_locations(self) -> Dict[str, Location]:
-        return self._locations
+    def get_cities(self) -> Dict[str, City]:
+        return self._cities
 
-    def get_location(self, name: str) -> Location:
-        return self._locations[name]
+    def get_city(self, city_id: str) -> City:
+        return self._cities[city_id]
 
     def infection_rate(self) -> int:
-        print(self._infection_rate_marker)
         return INFECTIONS_RATES[self._infection_rate_marker]
 
     def infect(self):
@@ -176,7 +138,7 @@ class State:
             top_card = self._infection_deck.pop(0)
             outbreak = self._infect_city(top_card)
             if outbreak:
-                self._outbreak(top_card, self.get_location(top_card).get_color())
+                self._outbreak(top_card, self.get_city(top_card).get_color())
             self._infection_discard_pile.append(top_card)
 
     def report(self) -> str:
@@ -191,7 +153,7 @@ class State:
             ]
         ).format(
             active_player="%s:%s"
-                          % (self._active_player.name.lower(), self._player_actions),
+            % (self._active_player.name.lower(), self._player_actions),
             player_deck_size=len(self._player_deck),
             infection_rate=self.infection_rate(),
             outbreaks=self._outbreaks,
@@ -233,38 +195,62 @@ class State:
     Function to simulate outbreaks
     """
 
-    def _outbreak(self, location: str, color: Virus, outbreaks: Set[str] = None):
+    def _outbreak(self, city_id: str, color: Virus, outbreaks: Set[str] = None):
         if outbreaks is None:
             outbreaks = set()
-        if location not in outbreaks:
+        if city_id not in outbreaks:
             self._outbreaks += 1
-            neighbors = self.get_location(location).get_neighbors()
+            neighbors = self.get_city(city_id).get_neighbors()
             for n in neighbors:
                 has_outbreak = self._infect_city(n, color, 1)
                 if has_outbreak:
-                    outbreaks.add(location)
+                    outbreaks.add(city_id)
                     self._outbreak(n, color, outbreaks)
 
     def _serve_player_cards(self):
         for player in self._players.values():
-            player.add_cards(self.draw_player_cards(count=2))
+            player.add_cards(
+                self.draw_player_cards(count=TOTAL_STARTING_PLAYER_CARDS - PLAYER_COUNT)
+            )
 
-    def move_player(self, destination: str, player=None):
+    def move_player(self, move: Movement, player=None):
+        destination_city_id = move.destination
         if player is None:
             player = self._active_player
-        self._players[player].set_city(destination)
+
+        if move.type == MovementAction.DRIVE:
+            assert (
+                destination_city_id
+                in self.get_city(self.get_player_location(player)).get_neighbors()
+            )
+        if move.type == MovementAction.DIRECT_FLIGHT:
+            self._players[player].remove_card(destination_city_id)
+        if move.type == MovementAction.CHARTER_FLIGHT:
+            self._players[player].remove_card(self.get_player_location(player))
+        if move.type == MovementAction.SHUTTLE_FLIGHT:
+            assert (
+                self.get_city(self.get_player_location(player)).has_research_station()
+                and self.get_city(destination_city_id).has_research_station()
+            )
+
+        self._players[player].set_city(destination_city_id)
 
     def get_players(self) -> Dict[PlayerColor, Player]:
         return self._players
+
+    def get_player_location(self, player: PlayerColor) -> str:
+        return self._players[player].get_city_id()
 
     def other_action(self, action: Other, player: PlayerColor = None):
         if player is None:
             player = self._active_player
 
         if action.type == OtherAction.TREAT_DISEASE:
-            self._treat_city(action.city, action.target_virus)
+            self._treat_city(action.city_id, action.target_virus)
         elif action.type == OtherAction.BUILD_RESEARCH_STATION:
-            # TODO: add research station and remove card
+            self._players[player].remove_card(action.city_id)
+            self.get_city(action.city_id).build_research_station()
+            self._research_stations -= 1
             pass
         elif action.type == OtherAction.DISCOVER_CURE:
             # TODO: create cure and discover cards
@@ -273,27 +259,86 @@ class State:
             # TODO: move cards around
             pass
 
+    def get_possible_move_actions(self, player: PlayerColor = None) -> Set[Movement]:
+        if player is None:
+            player = self._players[self._active_player]
+        else:
+            player = self._players[player]
+
+        current_city_id = player.get_city_id()
+        # drives / ferries
+        moves = set(
+            map(
+                lambda c: Movement(MovementAction.DRIVE, c),
+                self.get_neighbors(current_city_id),
+            )
+        )
+
+        # direct flights
+        direct_flights = set(
+            map(
+                lambda c: Movement(MovementAction.DIRECT_FLIGHT, c),
+                set(player.get_cards()),
+            )
+        )
+        try:
+            direct_flights.remove(current_city_id)
+        except KeyError:
+            # dont care if player has not own city
+            pass
+
+        # charter flights
+        charter_flights = set(
+            map(
+                lambda c: Movement(MovementAction.DIRECT_FLIGHT, c),
+                CITIES.keys() if current_city_id in player.get_cards() else [],
+            )
+        )
+        # shuttle flights between two cities with research station
+        shuttle_flights: Set[Movement] = set()
+        if self.get_city(current_city_id).has_research_station():
+            shuttle_flights = set(
+                Movement(MovementAction.SHUTTLE_FLIGHT, cid)
+                for cid, loc in self.get_cities().items()
+                if loc.has_research_station()
+            )
+        return moves.union(direct_flights).union(charter_flights).union(shuttle_flights)
+
+    def get_city_color(self, city_id) -> Virus:
+        return self.get_city(city_id).get_color()
+
     def get_possible_other_actions(self, player: PlayerColor = None) -> Set[Other]:
         if player is None:
             player = self._players[self._active_player]
         else:
             player = self._players[player]
 
-        current_city = player.get_city()
+        current_city_id = player.get_city_id()
         possible_actions: Set[Other] = set()
 
         # What is treatable?
-        for virus, count in self.get_location(current_city).get_viral_state().items():
+        for virus, count in self.get_city(current_city_id).get_viral_state().items():
             if count > 0:
                 possible_actions.add(
-                    Other(OtherAction.TREAT_DISEASE, current_city, target_virus=virus)
+                    Other(
+                        OtherAction.TREAT_DISEASE, current_city_id, target_virus=virus
+                    )
                 )
 
         # Can I build research station?
-        # TODO: add research station and remove card
+        if current_city_id in player.get_cards() and self._research_stations > 0:
+            possible_actions.add(
+                Other(OtherAction.BUILD_RESEARCH_STATION, current_city_id)
+            )
 
         # Can I discover a cure at this situation?
-        # TODO: create cure and discover cards
+        if self.get_city(current_city_id).has_research_station():
+            player_card_viruses = [(self.get_city_color(card), card) for card in player.get_cards()]
+            for virus_card, count in Counter(player_card_viruses).items():
+                print(virus_card, count)
+                if count >= 5:
+                    virus, card = virus_card
+                    possible_actions.add(Other(OtherAction.DISCOVER_CURE, current_city_id, target_virus=virus))
 
         # Can I discover a cure at this situation?
         # TODO: move cards around

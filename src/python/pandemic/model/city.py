@@ -3,9 +3,15 @@ from typing import Set, List, Dict
 from pandemic.model.enums import Virus
 
 
-class Location:
+class City:
     def __init__(
-        self, name: str, lat: float, lon: float, color: Virus, text_alignment="left"
+        self,
+        name: str,
+        lat: float,
+        lon: float,
+        color: Virus,
+        text_alignment: str = "left",
+        research_station: bool = False,
     ):
         self._name = name
         self._lat = lat
@@ -20,6 +26,7 @@ class Location:
         assert isinstance(color, Virus)
         self._color = color
         self._neighbors: Set[str] = set()
+        self._research_station = research_station
 
     def get_color(self) -> Virus:
         return self._color
@@ -89,3 +96,9 @@ class Location:
 
     def __str__(self):
         return f"{self._name} {self._lat}:{self._lon}"
+
+    def has_research_station(self) -> bool:
+        return self._research_station
+
+    def build_research_station(self):
+        self._research_station = True

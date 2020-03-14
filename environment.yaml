@@ -6,6 +6,7 @@ dependencies:
   - black
   - cartopy
   - numpy
+  - pylint
   - pip:
     - tk
     - matplotlib

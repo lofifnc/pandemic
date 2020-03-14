@@ -2,9 +2,9 @@ from enum import Enum
 
 
 class PlayerColor(Enum):
-    RED = 1
+    TEAL = 1
     GREEN = 2
-    BLUE = 3
+    PINK = 3
     WHITE = 4
 
 
