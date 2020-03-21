@@ -39,9 +39,7 @@ class AutocompleteEntry(Entry):
                     self.lb = Listbox()
                     self.lb.bind("<Double-Button-1>", self.selection)
                     self.lb.bind("<Right>", self.selection)
-                    self.lb.place(
-                        x=self.winfo_x(), y=self.winfo_y() + self.winfo_height()
-                    )
+                    self.lb.place(x=self.winfo_x(), y=self.winfo_y() + self.winfo_height())
                     self.lb_up = True
 
                 self.lb.delete(0, END)

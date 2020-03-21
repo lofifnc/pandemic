@@ -13,12 +13,13 @@ class Simulation:
     def perform_action(self, command_string: str = None) -> State:
         if command_string is None:
             return self.state
-        self.state.turn(self._moves[command_string])
+
+        moves = self.state.step(self._moves[command_string])
+        while not moves:
+            moves = self.state.step(None)
         print(self.state.report())
         return self.state
 
     def get_possible_moves(self) -> Set[str]:
-        self._moves = {
-            move.to_command(): move for move in self.state.get_possible_actions()
-        }
+        self._moves = {move.to_command(): move for move in self.state.get_possible_actions()}
         return set(self._moves.keys())

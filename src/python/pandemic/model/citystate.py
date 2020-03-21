@@ -1,9 +1,10 @@
-from typing import Set, List, Dict
+from typing import Set, Dict
 
+from pandemic.model.city_id import City
 from pandemic.model.enums import Virus
 
 
-class City:
+class CityState:
     def __init__(
         self,
         name: str,
@@ -16,16 +17,11 @@ class City:
         self._name = name
         self._lat = lat
         self._lon = lon
-        self._viral_state = {
-            Virus.BLUE: 0,
-            Virus.RED: 0,
-            Virus.YELLOW: 0,
-            Virus.BLACK: 0,
-        }
+        self._viral_state = {Virus.BLUE: 0, Virus.RED: 0, Virus.YELLOW: 0, Virus.BLACK: 0}
         self.text_alignment = text_alignment
         assert isinstance(color, Virus)
         self._color = color
-        self._neighbors: Set[str] = set()
+        self._neighbors: Set[City] = set()
         self._research_station = research_station
 
     def get_color(self) -> Virus:
@@ -46,7 +42,7 @@ class City:
     def get_viral_state(self) -> Dict[Virus, int]:
         return self._viral_state
 
-    def add_neighbor(self, neighbor: str):
+    def add_neighbor(self, neighbor: City):
         self._neighbors.add(neighbor)
 
     """
@@ -76,7 +72,7 @@ class City:
             # treated
             return True
 
-    def get_neighbors(self) -> Set[str]:
+    def get_neighbors(self) -> Set[City]:
         return self._neighbors
 
     def format_infection_state(self) -> str:

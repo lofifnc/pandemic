@@ -1,8 +1,12 @@
 from enum import Enum, auto, unique
 
 
+class Card(Enum):
+    pass
+
+
 @unique
-class CityId(Enum):
+class City(Card):
     ALGIERS = auto()
     ATLANTA = auto()
     BAGHDAD = auto()
@@ -51,3 +55,23 @@ class CityId(Enum):
     TEHRAN = auto()
     TOKYO = auto()
     WASHINGTON = auto()
+
+
+class EpidemicCard(Card):
+    EPIDEMIC_CARD_1 = 1
+    EPIDEMIC_CARD_2 = 2
+    EPIDEMIC_CARD_3 = 3
+    EPIDEMIC_CARD_4 = 4
+    EPIDEMIC_CARD_5 = 5
+    EPIDEMIC_CARD_6 = 6
+
+
+class EventCard(Card):
+    def __init__(self, _, command):
+        self.command = command
+
+    RESILIENT_POPULATION = (auto(), "r")
+    ONE_QUIET_NIGHT = (auto(), "q")
+    AIRLIFT = (auto(), "a")
+    GOVERNMENT_GRANT = (auto(), "g")
+    FORECAST = (auto(), "f")

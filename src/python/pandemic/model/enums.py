@@ -33,3 +33,9 @@ class OtherAction(Enum):
     TREAT_DISEASE = (2, "t")
     SHARE_KNOWLEDGE = (3, "s")
     DISCOVER_CURE = (4, "d")
+
+
+class GameState(Enum):
+    RUNNING = 1
+    WIN = 2
+    LOSE = 3

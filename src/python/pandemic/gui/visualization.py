@@ -15,9 +15,9 @@ from collections import defaultdict
 
 from pandemic.gui.autocomplete_entry import AutocompleteEntry
 from pandemic.model.enums import PlayerColor, Virus
-from pandemic.model.city import City
+from pandemic.model.citystate import CityState
 from pandemic.state import CONNECTIONS, State
-from pandemic.state import CITIES
+from pandemic.state import CITIES, City
 
 RESEARCH_LAT = -50
 
@@ -40,7 +40,7 @@ matplotlib.use("TkAgg")
 class Visualization:
     _canvas: FigureCanvasTkAgg
     _toolbar: NavigationToolbar2Tk
-    _txt: Dict[str, Text]
+    _txt: Dict[City, Text]
     _player: Dict[PlayerColor, Line2D]
     _ax: Axes
     _player_cards_label: Label
@@ -51,7 +51,7 @@ class Visualization:
         self._txt = {}
         self._player = {}
         self._text_var = StringVar()
-        self._virus_marker: Dict[str, List[Line2D]] = defaultdict(list)
+        self._virus_marker: Dict[City, List[Line2D]] = defaultdict(list)
         # == start plotting ==
         self.plot()
         self._window.mainloop()
@@ -73,9 +73,7 @@ class Visualization:
 
         frame = Frame(self._window)
         frame.pack(side=TOP)
-        self._player_cards_label = Label(
-            frame, text="[%s]" % " ".join(state.get_player_cards())
-        )
+        self._player_cards_label = Label(frame, text=state.player_cards_to_string())
         self._player_cards_label.pack(side=LEFT)
         self._state_label = Label(frame, text=state.report())
         self._state_label.pack(side=LEFT)
@@ -115,9 +113,7 @@ class Visualization:
             )[0]
 
             Visualization.add_path_effect(city)
-            t = transforms.offset_copy(
-                city.get_transform(), x=location.get_text_offset(), y=2, units="dots"
-            )
+            t = transforms.offset_copy(city.get_transform(), x=location.get_text_offset(), y=2, units="dots")
 
             self._txt[city_id] = self._ax.text(
                 location.get_lon(),
@@ -133,7 +129,7 @@ class Visualization:
             self.mark_research_station(location)
 
         for color, player in state.get_players().items():
-            location = state.get_city(player.get_city_id())
+            location = state.get_city(player.get_city())
             self._player[color] = self._ax.plot(
                 location.get_lon(),
                 location.get_lat(),
@@ -148,22 +144,20 @@ class Visualization:
         color = "black" if line.get_color() != "black" else "white"
         line.set_path_effects([patheffects.withStroke(linewidth=2, foreground=color)])
 
-    def draw_virus_state(self, city_id: str, location: City, city: Line2D):
-        lon = location.get_lon()
-        lat = location.get_lat()
+    def draw_virus_state(self, city: City, city_state: CityState, city_plot: Line2D):
+        lon = city_state.get_lon()
+        lat = city_state.get_lat()
 
-        for idx, virus in enumerate(location.get_viral_state().keys()):
+        for idx, virus in enumerate(city_state.get_viral_state().keys()):
             for i in range(0, 3):
-                t = transforms.offset_copy(
-                    city.get_transform(), x=-8 + i * 8, y=-10 + idx * -8, units="dots"
-                )
+                t = transforms.offset_copy(city_plot.get_transform(), x=-8 + i * 8, y=-10 + idx * -8, units="dots")
                 vm = self._ax.plot(lon, lat, "x", transform=t, visible=False)[0]
                 Visualization.add_path_effect(vm)
-                self._virus_marker[city_id].append(vm)
+                self._virus_marker[city].append(vm)
 
-        self.update_virus_state(city_id, location)
+        self.update_virus_state(city, city_state)
 
-    def update_virus_state(self, city_id: str, location: City):
+    def update_virus_state(self, city_id: City, location: CityState):
 
         city_marker = self._virus_marker[city_id]
         [m.set_visible(False) for m in city_marker]
@@ -175,25 +169,25 @@ class Visualization:
                 i += 1
 
     @staticmethod
-    def text_for_location(location: City) -> str:
-        return f"{location.get_name()} {location.format_infection_state()}"
+    def text_for_location(city_state: CityState) -> str:
+        return f"{city_state.get_name()} {city_state.format_infection_state()}"
 
     def update_plot(self, state: State):
-        self._player_cards_label["text"] = "[%s]" % " ".join(state.get_player_cards())
+        self._player_cards_label["text"] = state.player_cards_to_string()
         self._state_label["text"] = state.report()
 
-        for city_id, location in state.get_cities().items():
-            self.update_virus_state(city_id, location)
+        for city_id, city_state in state.get_cities().items():
+            self.update_virus_state(city_id, city_state)
 
         for color, player in state.get_players().items():
-            location = state.get_city(player.get_city_id())
-            self._player[color].set_xdata(location.get_lon())
-            self._player[color].set_ydata(location.get_lat())
-            self.mark_research_station(location)
+            city_state = state.get_city(player.get_city())
+            self._player[color].set_xdata(city_state.get_lon())
+            self._player[color].set_ydata(city_state.get_lat())
+            self.mark_research_station(city_state)
 
         self._canvas.draw()
 
-    def mark_research_station(self, location: City):
+    def mark_research_station(self, location: CityState):
         if location.has_research_station():
             self._ax.plot(
                 [location.get_lon(), RESEARCH_LON],
