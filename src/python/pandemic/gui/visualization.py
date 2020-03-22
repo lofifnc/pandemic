@@ -14,7 +14,7 @@ from matplotlib import transforms
 from collections import defaultdict
 
 from pandemic.gui.autocomplete_entry import AutocompleteEntry
-from pandemic.model.enums import PlayerColor, Virus
+from pandemic.model.enums import Character, Virus
 from pandemic.model.citystate import CityState
 from pandemic.state import CONNECTIONS, State
 from pandemic.state import CITIES, City
@@ -41,7 +41,7 @@ class Visualization:
     _canvas: FigureCanvasTkAgg
     _toolbar: NavigationToolbar2Tk
     _txt: Dict[City, Text]
-    _player: Dict[PlayerColor, Line2D]
+    _player: Dict[Character, Line2D]
     _ax: Axes
     _player_cards_label: Label
     _state_label: Label
@@ -128,14 +128,14 @@ class Visualization:
             self.draw_virus_state(city_id, location, city)
             self.mark_research_station(location)
 
-        for color, player in state.get_players().items():
+        for character, player in state.get_players().items():
             location = state.get_city(player.get_city())
-            self._player[color] = self._ax.plot(
+            self._player[character] = self._ax.plot(
                 location.get_lon(),
                 location.get_lat(),
                 "d",
                 markersize=9,
-                color=color.name.lower(),
+                color=character.color,
                 transform=ccrs.Geodetic(),
             )[0]
 

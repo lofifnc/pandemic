@@ -1,7 +1,7 @@
 from typing import FrozenSet, List, Tuple
 
 from pandemic.model.city_id import EventCard, City, Card
-from pandemic.model.enums import MovementAction, OtherAction, Virus, PlayerColor
+from pandemic.model.enums import MovementAction, OtherAction, Virus, Character
 from pandemic.utils import iterable_to_string
 
 
@@ -47,9 +47,9 @@ class Other(ActionInterface):
         city: City,
         target_virus: Virus = None,
         cure_card_combination: FrozenSet[City] = None,
-        player: PlayerColor = None,
+        player: Character = None,
         card: City = None,
-        target_player: PlayerColor = None,
+        target_player: Character = None,
     ):
         super().__init__()
         self.type = type
@@ -101,9 +101,9 @@ class Event(ActionInterface):
     def __init__(
         self,
         type: EventCard,
-        player: PlayerColor,
+        player: Character,
         discard_card: City = None,
-        target_player: PlayerColor = None,
+        target_player: Character = None,
         destination: City = None,
         forecast: Tuple[City] = None,
     ):
@@ -138,12 +138,15 @@ class Event(ActionInterface):
     def __key(self):
         return (self.type, self.player, self.target_player, self.discard_card, self.destination, self.forecast)
 
+    def __repr__(self):
+        return self.to_command()
+
 
 class ThrowCard(ActionInterface):
 
     PREFIX = "t"
 
-    def __init__(self, player: PlayerColor, card: Card):
+    def __init__(self, player: Character, card: Card):
         super().__init__()
         self.player = player
         self.card = card
@@ -160,3 +163,4 @@ class ThrowCard(ActionInterface):
 
     def __key(self):
         return self.card, self.player
+

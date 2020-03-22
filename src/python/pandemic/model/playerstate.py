@@ -1,6 +1,6 @@
 from typing import List, Set
 
-from pandemic.model.city_id import Card
+from pandemic.model.city_id import Card, EventCard
 from pandemic.model.constants import *
 
 
@@ -20,6 +20,9 @@ class PlayerState:
 
     def get_city_cards(self) -> Set[City]:
         return {c for c in self._cards if isinstance(c, City)}
+
+    def get_event_cards(self) -> Set[EventCard]:
+        return {c for c in self._cards if isinstance(c, EventCard)}
 
     def add_card(self, card: Card):
         self._cards.add(card)

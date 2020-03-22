@@ -2,7 +2,7 @@ import itertools
 import logging
 from collections import Counter
 from enum import Enum
-from random import shuffle
+from random import shuffle, choices
 from typing import List, Set
 
 import numpy as np
@@ -10,8 +10,9 @@ import numpy as np
 from pandemic.model.actions import ActionInterface, Movement, Other, Event, ThrowCard
 from pandemic.model.city_id import EventCard, EpidemicCard, Card
 from pandemic.model.constants import *
-from pandemic.model.enums import PlayerColor, MovementAction, OtherAction, GameState
+from pandemic.model.enums import Character, MovementAction, OtherAction, GameState
 from pandemic.model.playerstate import PlayerState
+from itertools import chain
 
 
 class Phase(Enum):
@@ -25,11 +26,11 @@ class State:
     def __init__(self, player_count: int = PLAYER_COUNT):
 
         # players
-        self._players: Dict[PlayerColor, PlayerState] = {
-            PlayerColor(n): PlayerState() for n in range(1, player_count + 1)
+        self._players: Dict[Character, PlayerState] = {
+             c: PlayerState() for c in choices(list(Character.__members__.values()), k=player_count)
         }
 
-        self._active_player: PlayerColor = list(self._players.keys())[0]
+        self._active_player: Character = list(self._players.keys())[0]
 
         # counters
         self._research_stations = 5
@@ -78,20 +79,24 @@ class State:
             self._infection_discard_pile.append(top_card)
 
     def _infect_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
-        outbreak = False
+        outbreak_occurred = False
         city_state = self.get_city(city)
         if color is None:
             color = city_state.get_color()
         if self._cures[color] and self._cubes[color] == COUNT_CUBES:
             # virus has been eradicated
-            return outbreak
+            return outbreak_occurred
         for _ in itertools.repeat(None, times):
-            outbreak = self.get_city(city).inc_infection(color)
-            if outbreak:
+            outbreak_occurred = self.get_city(city).inc_infection(color)
+            if outbreak_occurred:
                 break
-            self._cubes[color] -= 1
 
-        return outbreak
+            if self._cubes[color] > 0:
+                self._cubes[color] -= 1
+            else:
+                self._game_state = GameState.LOST
+
+        return outbreak_occurred
 
     def _treat_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
         is_empty = False
@@ -167,12 +172,12 @@ class State:
     def active_player(self) -> PlayerState:
         return self._players[self._active_player]
 
-    def get_next_player(self) -> PlayerColor:
+    def get_next_player(self) -> Character:
         list_of_player_colors = list(self._players.keys())
         index_of_active_player = list_of_player_colors.index(self._active_player)
         return list_of_player_colors[(index_of_active_player + 1) % len(list_of_player_colors)]
 
-    def get_possible_actions(self, player: PlayerColor = None) -> Set[ActionInterface]:
+    def get_possible_actions(self, player: Character = None) -> Set[ActionInterface]:
         if player is None:
             player = self._active_player
 
@@ -229,14 +234,6 @@ class State:
     def infection_rate(self) -> int:
         return INFECTIONS_RATES[self._infection_rate_marker]
 
-    def infect(self):
-        for _ in itertools.repeat(None, self.infection_rate()):
-            top_card = self._infection_deck.pop(0)
-            outbreak = self._infect_city(top_card)
-            if outbreak:
-                self._outbreak(top_card, self.get_city(top_card).get_color())
-            self._infection_discard_pile.append(top_card)
-
     def report(self) -> str:
         min_cubes = min(self._cubes, key=self._cubes.get)
         return " ".join(
@@ -285,14 +282,15 @@ class State:
                 return [top_card]
         except IndexError:
             logging.info("you lost no more cards")
+            self._game_state = GameState.LOST
             return []
 
-    def get_player_cards(self, player: PlayerColor = None):
+    def get_player_cards(self, player: Character = None):
         if player is None:
             player = self._active_player
         return self._players[player].get_cards()
 
-    def player_cards_to_string(self, player: PlayerColor = None) -> str:
+    def player_cards_to_string(self, player: Character = None) -> str:
         return " ".join(map(lambda x: x.name.lower(), self.get_player_cards(player)))
 
     def get_actions_left(self):
@@ -307,7 +305,8 @@ class State:
             outbreaks = set()
         if city not in outbreaks:
             self._outbreaks += 1
-
+            if self._outbreaks > 7:
+                self._game_state = GameState.LOST
             neighbors = self.get_city(city).get_neighbors()
             for n in neighbors:
                 has_outbreak = self._infect_city(n, color, 1)
@@ -338,16 +337,16 @@ class State:
 
         self._players[player].set_city(destination_city)
 
-    def get_players(self) -> Dict[PlayerColor, PlayerState]:
+    def get_players(self) -> Dict[Character, PlayerState]:
         return self._players
 
     def get_phase(self) -> Phase:
         return self._phase
 
-    def get_player_current_city(self, player: PlayerColor) -> City:
+    def get_player_current_city(self, player: Character) -> City:
         return self._players[player].get_city()
 
-    def other_action(self, action: Other, player: PlayerColor = None):
+    def other_action(self, action: Other, player: Character = None):
         if player is None:
             player = self._active_player
 
@@ -365,7 +364,7 @@ class State:
             self._players[action.player].remove_card(action.card)
             self._players[action.target_player].add_card(action.card)
 
-    def get_possible_move_actions(self, player: PlayerColor = None) -> Set[Movement]:
+    def get_possible_move_actions(self, player: Character = None) -> Set[Movement]:
         if player is None:
             player = self._players[self._active_player]
         else:
@@ -376,12 +375,7 @@ class State:
         moves = set(map(lambda c: Movement(MovementAction.DRIVE, c), self.get_neighbors(current_city)))
 
         # direct flights
-        direct_flights = set(
-            map(
-                lambda c: Movement(MovementAction.DIRECT_FLIGHT, c),
-                player.get_city_cards(),
-            )
-        )
+        direct_flights = set(map(lambda c: Movement(MovementAction.DIRECT_FLIGHT, c), player.get_city_cards(),))
         try:
             direct_flights.remove(current_city)
         except KeyError:
@@ -408,7 +402,10 @@ class State:
     def get_city_color(self, city: City) -> Virus:
         return self.get_city(city).get_color()
 
-    def get_possible_other_actions(self, player: PlayerColor = None) -> Set[Other]:
+    def get_game_condition(self) -> GameState:
+        return self._game_state
+
+    def get_possible_other_actions(self, player: Character = None) -> Set[Other]:
         if player is None:
             player_color = self._active_player
         else:
@@ -433,7 +430,9 @@ class State:
             player_card_viruses = [self.get_city_color(card) for card in player.get_cards() if isinstance(card, City)]
             for virus, count in Counter(player_card_viruses).items():
                 if count >= 5 and not self._cures[virus]:
-                    potential_cure_cards: List[City] = list(filter(lambda c: self.get_city_color(c) == virus, player.get_city_cards()))
+                    potential_cure_cards: List[City] = list(
+                        filter(lambda c: self.get_city_color(c) == virus, player.get_city_cards())
+                    )
 
                     for cure_cards in list(itertools.combinations(potential_cure_cards, 5)):
                         possible_actions.add(
@@ -496,31 +495,42 @@ class State:
             self._players[event.player].remove_card(EventCard.ONE_QUIET_NIGHT)
 
     def get_possible_event_actions(self) -> Set[Event]:
-        # TODO: search every player
+        possible_actions: Set[Event] = set()
+        players_with_event_cards = filter(
+            lambda t: t[2], [(p, s, s.get_event_cards()) for p, s in self.get_players().items()]
+        )
+        for player, state, event_cards in players_with_event_cards:
+            possible_actions = possible_actions.union(
+                chain.from_iterable(self.__action_for_event_card(player, state, card) for card in event_cards)
+            )
 
-        player_color = self._active_player
-        player = self._players[player_color]
+        return possible_actions
+
+    def __action_for_event_card(
+        self, player_color: Character, state: PlayerState, event_card: EventCard
+    ) -> Set[Event]:
 
         possible_actions: Set[Event] = set()
-        if EventCard.RESILIENT_POPULATION in player.get_cards():
+        if event_card == EventCard.RESILIENT_POPULATION:
             for card in self._infection_discard_pile:
                 possible_actions.add(Event(EventCard.RESILIENT_POPULATION, player=player_color, discard_card=card))
 
-        if EventCard.AIRLIFT in player.get_cards():
+        if event_card == EventCard.AIRLIFT:
             for city in self.get_cities().keys():
                 for p, _ in filter(lambda pcp: pcp[1].get_city() != city, self.get_players().items()):
                     possible_actions.add(
                         Event(EventCard.AIRLIFT, player=player_color, target_player=p, destination=city)
                     )
 
-        if EventCard.FORECAST in player.get_cards():
+        if event_card == EventCard.FORECAST:
             for permutation in itertools.permutations(self._infection_deck[:6]):
                 possible_actions.add(Event(EventCard.FORECAST, player=player_color, forecast=tuple(permutation)))
 
-        if EventCard.GOVERNMENT_GRANT in player.get_cards() and self._research_stations > 0:
+        if event_card == EventCard.GOVERNMENT_GRANT and self._research_stations > 0:
             for city, _ in filter(lambda cid: not cid[1].has_research_station(), self.get_cities().items()):
                 possible_actions.add(Event(EventCard.GOVERNMENT_GRANT, player=player_color, destination=city))
-        if EventCard.ONE_QUIET_NIGHT in player.get_cards():
+
+        if event_card == EventCard.ONE_QUIET_NIGHT:
             possible_actions.add(Event(EventCard.ONE_QUIET_NIGHT, player=player_color))
 
         return possible_actions

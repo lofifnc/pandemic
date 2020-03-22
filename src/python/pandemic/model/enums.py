@@ -1,11 +1,21 @@
 from enum import Enum
 
 
-class PlayerColor(Enum):
-    TEAL = 1
-    GREEN = 2
-    PINK = 3
-    WHITE = 4
+class Character(bytes, Enum):
+
+    def __new__(cls, value, color):
+        obj = bytes.__new__(cls, [value])
+        obj._value_ = value
+        obj.color = color
+        return obj
+
+    CONTINGENCY_EXPORT = (1, "teal")  # "CONTINGENCY"
+    DISPATCHER = (2, "pink")  # DISPATCHER
+    MEDIC = (3, "orange")  # MEDIC
+    OPERATIONS_EXPERT = (4, "green")   # OPERATIONS EXPERT
+    QUARANTINE_SPECIALIST = (5, "darkgreen")  # QUARANTINE SPECIALIST
+    RESEARCHER = (6, "brown")  # RESEARCHER
+    SCIENTIST = (7, "white")   # SCIENTIST
 
 
 class Virus(Enum):
@@ -38,4 +48,4 @@ class OtherAction(Enum):
 class GameState(Enum):
     RUNNING = 1
     WIN = 2
-    LOSE = 3
+    LOST = 3
