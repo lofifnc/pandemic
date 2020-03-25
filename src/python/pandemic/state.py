@@ -7,10 +7,21 @@ from typing import List, Set
 
 import numpy as np
 
-from pandemic.model.actions import ActionInterface, Movement, Other, Event, ThrowCard
+from pandemic.model.actions import (
+    ActionInterface,
+    Movement,
+    Other,
+    Event,
+    ThrowCard,
+    DiscoverCure,
+    BuildResearchStation,
+    TreatDisease,
+    ShareKnowledge,
+    ReserveCard,
+    ResilientPopulation, Airlift, Forecast, GovernmentGrant, OneQuietNight)
 from pandemic.model.city_id import EventCard, EpidemicCard, Card
 from pandemic.model.constants import *
-from pandemic.model.enums import Character, MovementAction, OtherAction, GameState
+from pandemic.model.enums import Character, MovementAction, GameState
 from pandemic.model.playerstate import PlayerState
 from itertools import chain
 
@@ -27,7 +38,7 @@ class State:
 
         # players
         self._players: Dict[Character, PlayerState] = {
-             c: PlayerState() for c in choices(list(Character.__members__.values()), k=player_count)
+            c: PlayerState() for c in choices(list(Character.__members__.values()), k=player_count)
         }
 
         self._active_player: Character = list(self._players.keys())[0]
@@ -346,23 +357,25 @@ class State:
     def get_player_current_city(self, player: Character) -> City:
         return self._players[player].get_city()
 
-    def other_action(self, action: Other, player: Character = None):
-        if player is None:
-            player = self._active_player
+    def other_action(self, action: Other, character: Character = None):
+        if character is None:
+            character = self._active_player
 
-        if action.type == OtherAction.TREAT_DISEASE:
+        if isinstance(action, TreatDisease):
             self._treat_city(action.city, action.target_virus)
-        elif action.type == OtherAction.BUILD_RESEARCH_STATION:
-            self._players[player].remove_card(action.city)
+        elif isinstance(action, BuildResearchStation):
+            self._players[character].remove_card(action.city)
             self.get_city(action.city).build_research_station()
             self._research_stations -= 1
-        elif action.type == OtherAction.DISCOVER_CURE:
-            for card in action.cure_card_combination:
-                self._players[player].remove_card(card)
+        elif isinstance(action, DiscoverCure):
+            for card in action.card_combination:
+                self._players[character].remove_card(card)
             self._cures[action.target_virus] = True
-        elif action.type == OtherAction.SHARE_KNOWLEDGE:
+        elif isinstance(action, ShareKnowledge):
             self._players[action.player].remove_card(action.card)
             self._players[action.target_player].add_card(action.card)
+        elif isinstance(action, ReserveCard):
+            self._players[character].set_contingency_planner_card(action.card)
 
     def get_possible_move_actions(self, player: Character = None) -> Set[Movement]:
         if player is None:
@@ -375,7 +388,7 @@ class State:
         moves = set(map(lambda c: Movement(MovementAction.DRIVE, c), self.get_neighbors(current_city)))
 
         # direct flights
-        direct_flights = set(map(lambda c: Movement(MovementAction.DIRECT_FLIGHT, c), player.get_city_cards(),))
+        direct_flights = set(map(lambda c: Movement(MovementAction.DIRECT_FLIGHT, c), player.get_city_cards()))
         try:
             direct_flights.remove(current_city)
         except KeyError:
@@ -405,92 +418,77 @@ class State:
     def get_game_condition(self) -> GameState:
         return self._game_state
 
-    def get_possible_other_actions(self, player: Character = None) -> Set[Other]:
-        if player is None:
-            player_color = self._active_player
+    def get_possible_other_actions(self, character: Character = None) -> Set[ActionInterface]:
+        if character is None:
+            character = self._active_player
         else:
-            player_color = player
+            character = character
 
-        player = self._players[player_color]
+        player = self._players[character]
 
         current_city = player.get_city()
-        possible_actions: Set[Other] = set()
+        possible_actions: Set[ActionInterface] = set()
 
         # What is treatable?
         for virus, count in self.get_city(current_city).get_viral_state().items():
             if count > 0:
-                possible_actions.add(Other(OtherAction.TREAT_DISEASE, current_city, target_virus=virus))
+                possible_actions.add(TreatDisease(current_city, target_virus=virus))
 
         # Can I build research station?
         if current_city in player.get_cards() and self._research_stations > 0:
-            possible_actions.add(Other(OtherAction.BUILD_RESEARCH_STATION, current_city))
+            possible_actions.add(BuildResearchStation(current_city))
 
         # Can I discover a cure at this situation?
         if self.get_city(current_city).has_research_station():
             player_card_viruses = [self.get_city_color(card) for card in player.get_cards() if isinstance(card, City)]
             for virus, count in Counter(player_card_viruses).items():
-                if count >= 5 and not self._cures[virus]:
+                cards_for_cure = 4 if character == Character.SCIENTIST else 5
+                if count >= cards_for_cure and not self._cures[virus]:
                     potential_cure_cards: List[City] = list(
                         filter(lambda c: self.get_city_color(c) == virus, player.get_city_cards())
                     )
 
-                    for cure_cards in list(itertools.combinations(potential_cure_cards, 5)):
-                        possible_actions.add(
-                            Other(
-                                OtherAction.DISCOVER_CURE,
-                                current_city,
-                                target_virus=virus,
-                                cure_card_combination=frozenset(cure_cards),
-                            )
-                        )
+                    for cure_cards in list(itertools.combinations(potential_cure_cards, cards_for_cure)):
+                        possible_actions.add(DiscoverCure(target_virus=virus, card_combination=frozenset(cure_cards)))
 
         # Can I share knowledge?
         players_in_city = {c: p for c, p in self._players.items() if p.get_city() == current_city}
         if len(players_in_city) > 1:
             for pc, p in players_in_city.items():
                 if current_city in p.get_cards():
-                    if pc == player_color:
+                    if pc == character:
                         # give card to other player
                         share_with_others = set(
-                            Other(
-                                OtherAction.SHARE_KNOWLEDGE,
-                                current_city,
-                                card=current_city,
-                                player=player_color,
-                                target_player=other,
-                            )
+                            ShareKnowledge(card=current_city, player=character, target_player=other)
                             for other in players_in_city.keys()
-                            if other != player_color
+                            if other != character
                         )
                         possible_actions = possible_actions.union(share_with_others)
                     else:
                         # get card from other player
-                        possible_actions.add(
-                            Other(
-                                OtherAction.SHARE_KNOWLEDGE,
-                                current_city,
-                                card=current_city,
-                                player=pc,
-                                target_player=player_color,
-                            )
-                        )
+                        possible_actions.add(ShareKnowledge(card=current_city, player=pc, target_player=character))
+
+        # Contigency Planner
+        if character == Character.CONTINGENCY_PLANNER and not self._players[character].get_contingency_planner_card():
+            for card in self._player_discard_pile:
+                possible_actions.add(ReserveCard(card))
+
         return possible_actions
 
     def event_action(self, event: Event):
-        event_type = event.type
-        if event_type == EventCard.FORECAST:
+        if isinstance(event, Forecast):
             self._infection_discard_pile[:6] = event.forecast
             self._players[event.player].remove_card(EventCard.FORECAST)
-        elif event_type == EventCard.GOVERNMENT_GRANT:
-            self.get_city(event.destination).build_research_station()
+        elif isinstance(event, GovernmentGrant):
+            self.get_city(event.target_city).build_research_station()
             self._players[event.player].remove_card(EventCard.GOVERNMENT_GRANT)
-        elif event_type == EventCard.AIRLIFT:
+        elif isinstance(event, Airlift):
             self._players[event.target_player].set_city(event.destination)
             self._players[event.player].remove_card(EventCard.AIRLIFT)
-        elif event_type == EventCard.RESILIENT_POPULATION:
-            self._infection_discard_pile.remove(event.discard_card)
+        elif isinstance(event, ResilientPopulation):
+            self._infection_discard_pile.remove(event.discard_city)
             self._players[event.player].remove_card(EventCard.RESILIENT_POPULATION)
-        elif event_type == EventCard.ONE_QUIET_NIGHT:
+        elif isinstance(event, OneQuietNight):
             self._resilient = True
             self._players[event.player].remove_card(EventCard.ONE_QUIET_NIGHT)
 
@@ -506,32 +504,30 @@ class State:
 
         return possible_actions
 
-    def __action_for_event_card(
-        self, player_color: Character, state: PlayerState, event_card: EventCard
-    ) -> Set[Event]:
+    def __action_for_event_card(self, player_color: Character, state: PlayerState, event_card: EventCard) -> Set[Event]:
 
         possible_actions: Set[Event] = set()
         if event_card == EventCard.RESILIENT_POPULATION:
             for card in self._infection_discard_pile:
-                possible_actions.add(Event(EventCard.RESILIENT_POPULATION, player=player_color, discard_card=card))
+                possible_actions.add(ResilientPopulation(player=player_color, discard_city=card))
 
         if event_card == EventCard.AIRLIFT:
             for city in self.get_cities().keys():
                 for p, _ in filter(lambda pcp: pcp[1].get_city() != city, self.get_players().items()):
                     possible_actions.add(
-                        Event(EventCard.AIRLIFT, player=player_color, target_player=p, destination=city)
+                       Airlift(player=player_color, target_player=p, destination=city)
                     )
 
         if event_card == EventCard.FORECAST:
             for permutation in itertools.permutations(self._infection_deck[:6]):
-                possible_actions.add(Event(EventCard.FORECAST, player=player_color, forecast=tuple(permutation)))
+                possible_actions.add(Forecast(player=player_color, forecast=tuple(permutation)))
 
         if event_card == EventCard.GOVERNMENT_GRANT and self._research_stations > 0:
             for city, _ in filter(lambda cid: not cid[1].has_research_station(), self.get_cities().items()):
-                possible_actions.add(Event(EventCard.GOVERNMENT_GRANT, player=player_color, destination=city))
+                possible_actions.add(GovernmentGrant(player=player_color, target_city=city))
 
         if event_card == EventCard.ONE_QUIET_NIGHT:
-            possible_actions.add(Event(EventCard.ONE_QUIET_NIGHT, player=player_color))
+            possible_actions.add(OneQuietNight(player=player_color))
 
         return possible_actions
 

@@ -2,20 +2,19 @@ from enum import Enum
 
 
 class Character(bytes, Enum):
-
     def __new__(cls, value, color):
         obj = bytes.__new__(cls, [value])
         obj._value_ = value
         obj.color = color
         return obj
 
-    CONTINGENCY_EXPORT = (1, "teal")  # "CONTINGENCY"
+    CONTINGENCY_PLANNER = (1, "teal")  # "CONTINGENCY"
     DISPATCHER = (2, "pink")  # DISPATCHER
     MEDIC = (3, "orange")  # MEDIC
-    OPERATIONS_EXPERT = (4, "green")   # OPERATIONS EXPERT
+    OPERATIONS_EXPERT = (4, "green")  # OPERATIONS EXPERT
     QUARANTINE_SPECIALIST = (5, "darkgreen")  # QUARANTINE SPECIALIST
     RESEARCHER = (6, "brown")  # RESEARCHER
-    SCIENTIST = (7, "white")   # SCIENTIST
+    SCIENTIST = (7, "white")  # SCIENTIST
 
 
 class Virus(Enum):
@@ -33,16 +32,6 @@ class MovementAction(Enum):
     DIRECT_FLIGHT = (2, "f")
     CHARTER_FLIGHT = (3, "c")
     SHUTTLE_FLIGHT = (4, "s")
-
-
-class OtherAction(Enum):
-    def __init__(self, _, command):
-        self.command = command
-
-    BUILD_RESEARCH_STATION = (1, "b")
-    TREAT_DISEASE = (2, "t")
-    SHARE_KNOWLEDGE = (3, "s")
-    DISCOVER_CURE = (4, "d")
 
 
 class GameState(Enum):

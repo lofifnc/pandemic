@@ -1,166 +1,151 @@
-from typing import FrozenSet, List, Tuple
+from dataclasses import dataclass
+from typing import FrozenSet, Tuple
 
-from pandemic.model.city_id import EventCard, City, Card
-from pandemic.model.enums import MovementAction, OtherAction, Virus, Character
+from pandemic.model.city_id import City, Card
+from pandemic.model.enums import MovementAction, Virus, Character
 from pandemic.utils import iterable_to_string
 
 
 class ActionInterface:
-    def __init__(self):
-        pass
-
     def to_command(self):
         raise NotImplemented()
 
 
+@dataclass(frozen=True)
 class Movement(ActionInterface):
     PREFIX = "m"
 
-    def __init__(self, type: MovementAction, destination: City):
-        super().__init__()
-        self.type = type
-        self.destination = destination
+    type: MovementAction
+    destination: City
 
     def to_command(self):
-        return f"{self.PREFIX} {self.type.command} {self.destination.name}"
+        return f"{self.PREFIX} {self.type.command} {self.destination.name.lower()}"
 
     def __repr__(self):
         return f"{self.type.name}: {self.destination}"
 
-    def __eq__(self, o: object) -> bool:
-        return self.__class__ == o.__class__ and self.__key() == o.__key()
 
-    def __hash__(self) -> int:
-        return hash(self.__key())
-
-    def __key(self):
-        return (self.type, self.destination)
+#################
+# Other Actions #
+#################
 
 
 class Other(ActionInterface):
-
     PREFIX = "o"
 
-    def __init__(
-        self,
-        type: OtherAction,
-        city: City,
-        target_virus: Virus = None,
-        cure_card_combination: FrozenSet[City] = None,
-        player: Character = None,
-        card: City = None,
-        target_player: Character = None,
-    ):
-        super().__init__()
-        self.type = type
-        self.city = city
-        self.target_virus = target_virus
-        self.card = card
-        self.player = player
-        assert (
-            cure_card_combination is None
-            or len(cure_card_combination) == 5
-            and isinstance(cure_card_combination, frozenset)
-        )
-        self.cure_card_combination = cure_card_combination
-        self.target_player = target_player
+
+@dataclass(frozen=True)
+class ShareKnowledge(Other):
+    player: Character
+    card: City
+    target_player: Character
 
     def to_command(self):
-        if self.type == OtherAction.SHARE_KNOWLEDGE:
-            ending = f"{self.card} {self.player.name} {self.target_player.name}"
-        elif self.type == OtherAction.DISCOVER_CURE:
-            ending = f"{self.target_virus.name} {iterable_to_string(self.cure_card_combination)}"
-        elif self.type == OtherAction.TREAT_DISEASE:
-            ending = self.target_virus.name
-        else:
-            ending = ""
-        return f"{self.PREFIX} {self.type.command} {self.city.name} {ending}"
-
-    def __eq__(self, o: object) -> bool:
-        return self.__class__ == o.__class__ and self.__key() == o.__key()
-
-    def __hash__(self) -> int:
-        return hash(self.__key())
-
-    def __key(self):
-        return (
-            self.type,
-            self.target_virus,
-            self.cure_card_combination,
-            self.city,
-            self.target_player,
-            self.card,
-            self.player,
-        )
+        return f"{self.PREFIX} s {self.player.name.lower()}  {self.card.name.lower()} {self.target_player.name.lower()}"
 
 
+@dataclass(frozen=True)
+class TreatDisease(Other):
+
+    city: City
+    target_virus: Virus
+
+    def to_command(self):
+        return f"{self.PREFIX} t {self.city.name.lower()} {self.target_virus.name.lower()}"
+
+
+@dataclass(frozen=True)
+class DiscoverCure(Other):
+
+    card_combination: FrozenSet[City]
+    target_virus: Virus
+
+    def to_command(self):
+        return f"{self.PREFIX} d {self.target_virus.name.lower()} {iterable_to_string(self.card_combination)}"
+
+
+@dataclass(frozen=True)
+class BuildResearchStation(Other):
+    city: City
+
+    def to_command(self):
+        return f"{self.PREFIX} b {self.city.name.lower()}"
+
+
+@dataclass(frozen=True)
+class ReserveCard(Other):
+    card: Card
+
+    def to_command(self):
+        return f"{self.PREFIX} r {self.card.name.lower()}"
+
+
+######################
+# Event Card Actions #
+######################
+
+
+@dataclass(frozen=True)
 class Event(ActionInterface):
-
     PREFIX = "e"
 
-    def __init__(
-        self,
-        type: EventCard,
-        player: Character,
-        discard_card: City = None,
-        target_player: Character = None,
-        destination: City = None,
-        forecast: Tuple[City] = None,
-    ):
-        super().__init__()
-        self.type = type
-        self.player = player
-        self.discard_card = discard_card
-        self.target_player = target_player
-        self.destination = destination
-        self.forecast = forecast
+    player: Character
+
+
+@dataclass(frozen=True)
+class Forecast(Event):
+
+    forecast: Tuple[City]
 
     def to_command(self):
-        if self.type == EventCard.FORECAST:
-            ending = iterable_to_string(self.forecast)
-        elif self.type == EventCard.GOVERNMENT_GRANT:
-            ending = self.destination.name
-        elif self.type == EventCard.AIRLIFT:
-            ending = f"{self.target_player.name} {self.destination.name}"
-        elif self.type == EventCard.RESILIENT_POPULATION:
-            ending = self.discard_card.name
-        else:
-            ending = ""
-
-        return f"{self.PREFIX} {self.type.command} {self.player} {ending}"
-
-    def __eq__(self, o: object) -> bool:
-        return self.__class__ == o.__class__ and self.__key() == o.__key()
-
-    def __hash__(self) -> int:
-        return hash(self.__key())
-
-    def __key(self):
-        return (self.type, self.player, self.target_player, self.discard_card, self.destination, self.forecast)
-
-    def __repr__(self):
-        return self.to_command()
+        return f"{self.PREFIX} f ${self.player.name.lower()} ${iterable_to_string(self.forecast)}"
 
 
+@dataclass(frozen=True)
+class GovernmentGrant(Event):
+    target_city: City
+
+    def to_command(self):
+        return f"{self.PREFIX} g ${self.player.name.lower()} ${self.target_city.name.lower()}"
+
+
+@dataclass(frozen=True)
+class Airlift(Event):
+    target_player: Character
+    destination: City
+
+    def to_command(self):
+        return (
+            f"{self.PREFIX} g ${self.player.name.lower()} ${self.target_player.name.lower()} "
+            f"${self.destination.name.lower()}"
+        )
+
+
+@dataclass(frozen=True)
+class ResilientPopulation(Event):
+    discard_city: City
+
+    def to_command(self):
+        return f"{self.PREFIX} r ${self.player.name.lower()} ${self.discard_city.name.lower()}"
+
+
+@dataclass(frozen=True)
+class OneQuietNight(Event):
+
+    def to_command(self):
+        return f"{self.PREFIX} q ${self.player.name.lower()}"
+
+
+@dataclass(frozen=True)
 class ThrowCard(ActionInterface):
 
     PREFIX = "t"
 
-    def __init__(self, player: Character, card: Card):
-        super().__init__()
-        self.player = player
-        self.card = card
+    player: Character
+    card: Card
 
     def to_command(self):
 
         return f"{self.PREFIX} {self.player.name.lower()} {self.card.name.lower()}"
 
-    def __eq__(self, o: object) -> bool:
-        return self.__class__ == o.__class__ and self.__key() == o.__key()
-
-    def __hash__(self) -> int:
-        return hash(self.__key())
-
-    def __key(self):
-        return self.card, self.player
 

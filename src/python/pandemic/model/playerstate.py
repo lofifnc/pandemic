@@ -1,4 +1,4 @@
-from typing import List, Set
+from typing import List, Set, Optional
 
 from pandemic.model.city_id import Card, EventCard
 from pandemic.model.constants import *
@@ -8,6 +8,8 @@ class PlayerState:
     def __init__(self):
         self._city = PLAYER_START
         self._cards: Set[Card] = set()
+        # character specific state
+        self._contingency_planner_card: Optional[Card] = None
 
     def get_city(self) -> City:
         return self._city
@@ -16,13 +18,15 @@ class PlayerState:
         self._city = city_id
 
     def get_cards(self) -> Set[Card]:
-        return self._cards.copy()
+        return self._cards.copy().union(
+            {self._contingency_planner_card} if self._contingency_planner_card is not None else {}
+        )
 
     def get_city_cards(self) -> Set[City]:
-        return {c for c in self._cards if isinstance(c, City)}
+        return {c for c in self.get_cards() if isinstance(c, City)}
 
     def get_event_cards(self) -> Set[EventCard]:
-        return {c for c in self._cards if isinstance(c, EventCard)}
+        return {c for c in self.get_cards() if isinstance(c, EventCard)}
 
     def add_card(self, card: Card):
         self._cards.add(card)
@@ -30,8 +34,27 @@ class PlayerState:
     def add_cards(self, cards: List[Card]):
         self._cards = self._cards.union(cards)
 
-    def remove_card(self, card: Card):
-        self._cards.remove(card)
+    """
+        Remove card from player state
+        returns False if card has been removed from special contingency planner stack.
+    """
+
+    def remove_card(self, card: Card) -> bool:
+        try:
+            self._cards.remove(card)
+            return True
+        except KeyError:
+            if card == self._contingency_planner_card:
+                self._contingency_planner_card = None
+                return False
+            else:
+                raise KeyError
 
     def num_cards(self) -> int:
-        return len(self._cards)
+        return len(self.get_cards())
+
+    def get_contingency_planner_card(self) -> Card:
+        return self._contingency_planner_card
+
+    def set_contingency_planner_card(self, card: Card):
+        self._contingency_planner_card = card

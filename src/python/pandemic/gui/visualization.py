@@ -3,6 +3,7 @@ from tkinter import *
 from typing import Dict, List
 
 import cartopy.crs as ccrs
+import cartopy
 import matplotlib
 from matplotlib import patheffects
 from matplotlib.axes import Axes
@@ -62,7 +63,9 @@ class Visualization:
         self._ax.background_patch.set_visible(False)
         self._ax.outline_patch.set_visible(False)
         self._ax.axis("off")
-        self._ax.stock_img()
+
+        self._ax.add_feature(cartopy.feature.OCEAN)
+        self._ax.add_feature(cartopy.feature.LAND)
         self._canvas = FigureCanvasTkAgg(fig, master=self._window)
         self._canvas.draw()
         self._toolbar = NavigationToolbar2Tk(self._canvas, self._window)
