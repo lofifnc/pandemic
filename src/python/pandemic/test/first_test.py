@@ -8,9 +8,10 @@ from pandemic.model.actions import (
     ShareKnowledge,
     TreatDisease,
     ReserveCard,
-    OneQuietNight)
+    OneQuietNight,
+    Movement)
 from pandemic.model.city_id import EventCard
-from pandemic.model.enums import Character, Virus, GameState
+from pandemic.model.enums import Character, Virus, GameState, MovementAction
 from pandemic.state import State, Phase, City
 
 from pandemic.test.utils import less_random_state
@@ -432,3 +433,16 @@ def test_contingency_planner(less_random_state):
     assert EventCard.ONE_QUIET_NIGHT not in state.get_player_cards()
     assert state._players[active_player].get_contingency_planner_card() is None
     assert EventCard.ONE_QUIET_NIGHT not in state._player_discard_pile
+
+
+def test_dispatcher(less_random_state):
+    state = less_random_state(start_player=Character.DISPATCHER)
+    active_player = state._active_player
+    state._players[active_player].set_city(City.MADRID)
+
+    ability = Movement(MovementAction.DISPATCH, active_player, City.ATLANTA)
+    assert ability in state.get_possible_actions()
+    assert Movement(MovementAction.DRIVE, Character.RESEARCHER, City.WASHINGTON) in state.get_possible_actions()
+    state.step(ability)
+    assert state.get_player_current_city(active_player) == City.ATLANTA
+

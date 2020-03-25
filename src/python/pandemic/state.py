@@ -334,10 +334,9 @@ class State:
         for player in self._players.values():
             player.add_cards(self.draw_player_cards(count=TOTAL_STARTING_PLAYER_CARDS - player_count))
 
-    def move_player(self, move: Movement, player=None):
+    def move_player(self, move: Movement):
         destination_city = move.destination
-        if player is None:
-            player = self._active_player
+        player = move.player
 
         if move.type == MovementAction.DRIVE:
             assert destination_city in self.get_city(self.get_player_current_city(player)).get_neighbors()
@@ -383,39 +382,50 @@ class State:
             self._player_discard_pile.remove(action.card)
             self._players[character].set_contingency_planner_card(action.card)
 
-    def get_possible_move_actions(self, player: Character = None) -> Set[Movement]:
-        if player is None:
-            player = self._players[self._active_player]
-        else:
-            player = self._players[player]
+    def get_possible_move_actions(self, character: Character = None) -> Set[Movement]:
 
-        current_city = player.get_city()
+        if character is None:
+            character = self._active_player
+
+        player_state = self._players[character]
+
+        moves = self.__possible_moves(character, player_state.get_city_cards())
+
+        # Dispatcher
+        if character == Character.DISPATCHER:
+            for c in self._players.keys():
+                moves = moves.union(self.__possible_moves(c, player_state.get_city_cards()))
+            for f, t in itertools.permutations(self._players.keys(), 2):
+                moves.add(Movement(MovementAction.DISPATCH, f, self.get_player_current_city(t)))
+
+            self._players.keys()
+
+        return moves
+
+    def __possible_moves(self, character: Character, city_cards: Set[City]) -> Set[Movement]:
+        player_state = self._players[character]
+        current_city = player_state.get_city()
         # drives / ferries
-        moves = set(map(lambda c: Movement(MovementAction.DRIVE, c), self.get_neighbors(current_city)))
+        moves = set(map(lambda c: Movement(MovementAction.DRIVE, character, c), self.get_neighbors(current_city)))
 
         # direct flights
-        direct_flights = set(map(lambda c: Movement(MovementAction.DIRECT_FLIGHT, c), player.get_city_cards()))
-        try:
-            direct_flights.remove(current_city)
-        except KeyError:
-            # dont care if player has not own city
-            pass
+        direct_flights = set(Movement(MovementAction.DIRECT_FLIGHT, character, c) for c in city_cards if c != current_city)
 
         # charter flights
         charter_flights = set(
-            map(
-                lambda c: Movement(MovementAction.CHARTER_FLIGHT, c),
-                CITIES.keys() if current_city in player.get_cards() else [],
-            )
+            Movement(MovementAction.CHARTER_FLIGHT, character, c)
+            for c in (CITIES.keys() if current_city in city_cards else [])
+            if c != current_city
         )
         # shuttle flights between two cities with research station
         shuttle_flights: Set[Movement] = set()
         if self.get_city(current_city).has_research_station():
             shuttle_flights = set(
-                Movement(MovementAction.SHUTTLE_FLIGHT, cid)
+                Movement(MovementAction.SHUTTLE_FLIGHT, character, cid)
                 for cid, loc in self.get_cities().items()
                 if loc.has_research_station() and cid != current_city
             )
+
         return moves.union(direct_flights).union(charter_flights).union(shuttle_flights)
 
     def get_city_color(self, city: City) -> Virus:

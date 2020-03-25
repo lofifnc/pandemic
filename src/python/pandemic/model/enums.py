@@ -32,6 +32,7 @@ class MovementAction(Enum):
     DIRECT_FLIGHT = (2, "f")
     CHARTER_FLIGHT = (3, "c")
     SHUTTLE_FLIGHT = (4, "s")
+    DISPATCH = (5, "d")
 
 
 class GameState(Enum):

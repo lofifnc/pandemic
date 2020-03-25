@@ -16,10 +16,11 @@ class Movement(ActionInterface):
     PREFIX = "m"
 
     type: MovementAction
+    player: Character
     destination: City
 
     def to_command(self):
-        return f"{self.PREFIX} {self.type.command} {self.destination.name.lower()}"
+        return f"{self.PREFIX} {self.type.command} {self.destination.name.lower()} {self.player.name.lower()}"
 
     def __repr__(self):
         return f"{self.type.name}: {self.destination}"
