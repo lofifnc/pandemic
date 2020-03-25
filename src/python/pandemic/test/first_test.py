@@ -1,7 +1,5 @@
 from typing import Set, Type
 
-import pytest
-
 from pandemic.model.actions import (
     Event,
     ActionInterface,
@@ -13,25 +11,9 @@ from pandemic.model.actions import (
     OneQuietNight)
 from pandemic.model.city_id import EventCard
 from pandemic.model.enums import Character, Virus, GameState
-from pandemic.model.playerstate import PlayerState
 from pandemic.state import State, Phase, City
 
-
-@pytest.fixture
-def less_random_state():
-    def create_state(start_player: Character = Character.SCIENTIST):
-        state = State()
-        player_state = PlayerState()
-        player_state._cards = {}
-        state._players = {
-            start_player: PlayerState(),
-            Character.RESEARCHER if start_player.SCIENTIST else start_player.SCIENTIST: PlayerState(),
-        }
-
-        state._active_player = start_player
-        return state
-
-    return create_state
+from pandemic.test.utils import less_random_state
 
 
 def test_cure_virus(less_random_state):
@@ -229,33 +211,6 @@ def test_whole_round():
 
     # next player
     assert state.get_phase() == Phase.ACTIONS
-
-
-def test_quiet_event():
-    state = State()
-    active_player = state._active_player
-
-    state._players[active_player].add_card(EventCard.ONE_QUIET_NIGHT)
-
-    event = OneQuietNight(player=active_player)
-    actions = state.get_possible_actions()
-    assert event in actions
-    state.step(event)
-    assert state._resilient
-    assert EventCard.ONE_QUIET_NIGHT not in state.get_player_cards()
-
-
-def test_treat_city():
-    state = State()
-
-    state.get_city(City.ATLANTA).inc_infection()
-    virus_count = state.get_city(City.ATLANTA).get_viral_state()[Virus.BLUE]
-    other = TreatDisease(City.ATLANTA, target_virus=Virus.BLUE)
-    cube_count = state._cubes[Virus.BLUE]
-    assert other in state.get_possible_actions()
-    state.step(other)
-    assert state.get_city(City.ATLANTA).get_viral_state()[Virus.BLUE] == virus_count - 1
-    assert state._cubes[Virus.BLUE] == cube_count + 1
 
 
 def test_treat_city_with_cure():
@@ -467,6 +422,7 @@ def test_contingency_planner(less_random_state):
     state.step(ability)
     assert state._players[active_player].get_contingency_planner_card() == EventCard.ONE_QUIET_NIGHT
     assert EventCard.ONE_QUIET_NIGHT in state.get_player_cards(active_player)
+    assert EventCard.ONE_QUIET_NIGHT not in state._player_discard_pile
 
     event = OneQuietNight(player=active_player)
     actions = state.get_possible_actions()
@@ -475,3 +431,4 @@ def test_contingency_planner(less_random_state):
     assert state._resilient
     assert EventCard.ONE_QUIET_NIGHT not in state.get_player_cards()
     assert state._players[active_player].get_contingency_planner_card() is None
+    assert EventCard.ONE_QUIET_NIGHT not in state._player_discard_pile

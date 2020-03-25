@@ -131,7 +131,6 @@ class ResilientPopulation(Event):
 
 @dataclass(frozen=True)
 class OneQuietNight(Event):
-
     def to_command(self):
         return f"{self.PREFIX} q ${self.player.name.lower()}"
 
@@ -147,5 +146,3 @@ class ThrowCard(ActionInterface):
     def to_command(self):
 
         return f"{self.PREFIX} {self.player.name.lower()} {self.card.name.lower()}"
-
-

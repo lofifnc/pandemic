@@ -18,7 +18,12 @@ from pandemic.model.actions import (
     TreatDisease,
     ShareKnowledge,
     ReserveCard,
-    ResilientPopulation, Airlift, Forecast, GovernmentGrant, OneQuietNight)
+    ResilientPopulation,
+    Airlift,
+    Forecast,
+    GovernmentGrant,
+    OneQuietNight,
+)
 from pandemic.model.city_id import EventCard, EpidemicCard, Card
 from pandemic.model.constants import *
 from pandemic.model.enums import Character, MovementAction, GameState
@@ -337,9 +342,9 @@ class State:
         if move.type == MovementAction.DRIVE:
             assert destination_city in self.get_city(self.get_player_current_city(player)).get_neighbors()
         if move.type == MovementAction.DIRECT_FLIGHT:
-            self._players[player].remove_card(destination_city)
+            self._player_play_card(player, destination_city)
         if move.type == MovementAction.CHARTER_FLIGHT:
-            self._players[player].remove_card(self.get_player_current_city(player))
+            self._player_play_card(player, self.get_player_current_city(player))
         if move.type == MovementAction.SHUTTLE_FLIGHT:
             assert (
                 self.get_city(self.get_player_current_city(player)).has_research_station()
@@ -364,17 +369,18 @@ class State:
         if isinstance(action, TreatDisease):
             self._treat_city(action.city, action.target_virus)
         elif isinstance(action, BuildResearchStation):
-            self._players[character].remove_card(action.city)
+            self._player_play_card(character, action.city)
             self.get_city(action.city).build_research_station()
             self._research_stations -= 1
         elif isinstance(action, DiscoverCure):
             for card in action.card_combination:
-                self._players[character].remove_card(card)
+                self._player_play_card(character, card)
             self._cures[action.target_virus] = True
         elif isinstance(action, ShareKnowledge):
-            self._players[action.player].remove_card(action.card)
+            self._player_play_card(action.player, action.card)
             self._players[action.target_player].add_card(action.card)
         elif isinstance(action, ReserveCard):
+            self._player_discard_pile.remove(action.card)
             self._players[character].set_contingency_planner_card(action.card)
 
     def get_possible_move_actions(self, player: Character = None) -> Set[Movement]:
@@ -477,20 +483,24 @@ class State:
 
     def event_action(self, event: Event):
         if isinstance(event, Forecast):
-            self._infection_discard_pile[:6] = event.forecast
-            self._players[event.player].remove_card(EventCard.FORECAST)
+            self._infection_deck[:6] = event.forecast
+            self._player_play_card(event.player, EventCard.FORECAST)
         elif isinstance(event, GovernmentGrant):
             self.get_city(event.target_city).build_research_station()
-            self._players[event.player].remove_card(EventCard.GOVERNMENT_GRANT)
+            self._player_play_card(event.player, EventCard.GOVERNMENT_GRANT)
         elif isinstance(event, Airlift):
             self._players[event.target_player].set_city(event.destination)
-            self._players[event.player].remove_card(EventCard.AIRLIFT)
+            self._player_play_card(event.player, EventCard.AIRLIFT)
         elif isinstance(event, ResilientPopulation):
             self._infection_discard_pile.remove(event.discard_city)
-            self._players[event.player].remove_card(EventCard.RESILIENT_POPULATION)
+            self._player_play_card(event.player, EventCard.RESILIENT_POPULATION)
         elif isinstance(event, OneQuietNight):
             self._resilient = True
-            self._players[event.player].remove_card(EventCard.ONE_QUIET_NIGHT)
+            self._player_play_card(event.player, EventCard.ONE_QUIET_NIGHT)
+
+    def _player_play_card(self, player: Character, card: Card):
+        if self._players[player].remove_card(card):
+            self._player_discard_pile.append(card)
 
     def get_possible_event_actions(self) -> Set[Event]:
         possible_actions: Set[Event] = set()
@@ -514,9 +524,7 @@ class State:
         if event_card == EventCard.AIRLIFT:
             for city in self.get_cities().keys():
                 for p, _ in filter(lambda pcp: pcp[1].get_city() != city, self.get_players().items()):
-                    possible_actions.add(
-                       Airlift(player=player_color, target_player=p, destination=city)
-                    )
+                    possible_actions.add(Airlift(player=player_color, target_player=p, destination=city))
 
         if event_card == EventCard.FORECAST:
             for permutation in itertools.permutations(self._infection_deck[:6]):
