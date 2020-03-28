@@ -24,17 +24,6 @@ class Virus(Enum):
     BLACK = 4
 
 
-class MovementAction(Enum):
-    def __init__(self, _, command):
-        self.command = command
-
-    DRIVE = (1, "d")
-    DIRECT_FLIGHT = (2, "f")
-    CHARTER_FLIGHT = (3, "c")
-    SHUTTLE_FLIGHT = (4, "s")
-    DISPATCH = (5, "d")
-
-
 class GameState(Enum):
     RUNNING = 1
     WIN = 2

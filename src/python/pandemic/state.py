@@ -3,7 +3,7 @@ import logging
 from collections import Counter
 from enum import Enum
 from random import shuffle, choices
-from typing import List, Set
+from typing import List, Set, Optional
 
 import numpy as np
 
@@ -23,15 +23,22 @@ from pandemic.model.actions import (
     Forecast,
     GovernmentGrant,
     OneQuietNight,
+    DriveFerry,
+    DirectFlight,
+    CharterFlight,
+    ShuttleFlight,
+    Dispatch,
+    OperationsFlight,
 )
 from pandemic.model.city_id import EventCard, EpidemicCard, Card
 from pandemic.model.constants import *
-from pandemic.model.enums import Character, MovementAction, GameState
+from pandemic.model.enums import Character, GameState
 from pandemic.model.playerstate import PlayerState
 from itertools import chain
 
 
 class Phase(Enum):
+    SETUP = 0
     ACTIONS = 1
     DRAW_CARDS = 2
     INFECTIONS = 3
@@ -39,8 +46,9 @@ class Phase(Enum):
 
 
 class State:
-    def __init__(self, player_count: int = PLAYER_COUNT):
 
+    def __init__(self, player_count: int = PLAYER_COUNT):
+        self._phase = Phase.SETUP
         # players
         self._players: Dict[Character, PlayerState] = {
             c: PlayerState() for c in choices(list(Character.__members__.values()), k=player_count)
@@ -60,29 +68,29 @@ class State:
         }
         self._player_actions = PLAYER_ACTIONS
         self._cures: Dict[Virus, bool] = {Virus.YELLOW: False, Virus.BLACK: False, Virus.BLUE: False, Virus.RED: False}
-        self._phase = Phase.ACTIONS
-        self._resilient = False
+        self._one_quiet_night = False
         # phase specific state
         self._drawn_cards = 0
         self._infections = 0
 
         # cards
-        self._infection_deck: List[City] = list(CITIES.keys())
+        self._cities = create_cities_init_state()
+        self._infection_deck: List[City] = list(self._cities.keys())
         shuffle(self._infection_deck)
         self._infection_discard_pile: List[City] = []
 
-        self._player_deck: List[Card] = list(CITIES.keys()) + list(EventCard.__members__.values())
+        self._player_deck: List[Card] = list(self._cities.keys()) + list(EventCard.__members__.values())
         shuffle(self._player_deck)
         self._serve_player_cards(player_count)
         self._prepare_player_deck()
         self._player_discard_pile: List[Card] = []
 
-        self._cities = CITIES.copy()
         self._add_neighbors_to_city_state()
         self._game_state = GameState.RUNNING
 
         # infection
         self._init_infection_markers()
+        self._phase = Phase.ACTIONS
 
     def _init_infection_markers(self):
         for i in range(3, 0, -1):
@@ -94,16 +102,32 @@ class State:
             self._infect_city(top_card, times=num_infections)
             self._infection_discard_pile.append(top_card)
 
+    def _character_location(self, char: Character) -> Optional[City]:
+        state = self._players.get(char, None)
+        return state.get_city() if state else None
+
+    def _is_city_protected_by_quarantine(self, city) -> bool:
+        if self._phase != Phase.SETUP and Character.QUARANTINE_SPECIALIST in self._players.keys():
+            location = self._character_location(Character.QUARANTINE_SPECIALIST)
+            return city in self.get_neighbors(location).union([location])
+        return False
+
     def _infect_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
+
         outbreak_occurred = False
-        city_state = self.get_city(city)
+        city_state = self.get_city_state(city)
         if color is None:
             color = city_state.get_color()
-        if self._cures[color] and self._cubes[color] == COUNT_CUBES:
-            # virus has been eradicated
+
+        if (
+            self._is_city_protected_by_quarantine(city)
+            or self._cures[color]
+            and (self._cubes[color] == COUNT_CUBES or self._character_location(Character.MEDIC) == city)
+        ):
+            # virus has been eradicated or city is protected by medic or quarantine expert
             return outbreak_occurred
         for _ in itertools.repeat(None, times):
-            outbreak_occurred = self.get_city(city).inc_infection(color)
+            outbreak_occurred = self.get_city_state(city).inc_infection(color)
             if outbreak_occurred:
                 break
 
@@ -116,12 +140,12 @@ class State:
 
     def _treat_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
         is_empty = False
-        city_state = self.get_city(city)
+        city_state = self.get_city_state(city)
         if color is None:
             color = city_state.get_color()
 
         for _ in itertools.repeat(None, 3 if self._cures[color] else times):
-            is_empty = self.get_city(city).dec_infection(color)
+            is_empty = self.get_city_state(city).dec_infection(color)
             if is_empty:
                 break
             self._cubes[color] += 1
@@ -167,19 +191,20 @@ class State:
             self._phase = Phase.INFECTIONS
 
     def infections(self, action: ActionInterface):
-        if self._infections == 0 and self._resilient:
+        if self._infections == 0 and self._one_quiet_night:
             pass
         elif self._infections < self.infection_rate():
             top_card = self._infection_deck.pop(0)
             outbreak = self._infect_city(top_card)
             if outbreak:
-                self._outbreak(top_card, self.get_city(top_card).get_color())
+                self._outbreak(top_card, self.get_city_state(top_card).get_color())
             self._infection_discard_pile.append(top_card)
             self._infections += 1
-        if self._infections == self.infection_rate() or self._resilient:
+        if self._infections == self.infection_rate() or self._one_quiet_night:
             self._infections = 0
             if self._infections == 0:
-                self._resilient = False
+                self._one_quiet_night = False
+            [ps.signal_turn_end() for ps in self._players.values()]
             self._active_player = self.get_next_player()
             self._phase = Phase.ACTIONS
 
@@ -199,7 +224,7 @@ class State:
 
         possible_actions: Set[ActionInterface] = self.get_possible_event_actions()
 
-        # check all player hands
+        # check all players for hand limit and prompt action
         too_many_cards = False
         for color, state in self.get_players().items():
             if state.num_cards() > 7:
@@ -220,7 +245,7 @@ class State:
         return possible_actions
 
     def get_neighbors(self, city: City) -> Set[City]:
-        return self.get_city(city).get_neighbors()
+        return self.get_city_state(city).get_neighbors()
 
     def _prepare_player_deck(self):
         prepared_deck: List[Card] = []
@@ -244,7 +269,7 @@ class State:
     def get_cities(self) -> Dict[City, CityState]:
         return self._cities
 
-    def get_city(self, city: City) -> CityState:
+    def get_city_state(self, city: City) -> CityState:
         return self._cities[city]
 
     def infection_rate(self) -> int:
@@ -323,7 +348,7 @@ class State:
             self._outbreaks += 1
             if self._outbreaks > 7:
                 self._game_state = GameState.LOST
-            neighbors = self.get_city(city).get_neighbors()
+            neighbors = self.get_city_state(city).get_neighbors()
             for n in neighbors:
                 has_outbreak = self._infect_city(n, color, 1)
                 if has_outbreak:
@@ -336,21 +361,24 @@ class State:
 
     def move_player(self, move: Movement):
         destination_city = move.destination
-        player = move.player
+        character = move.player
 
-        if move.type == MovementAction.DRIVE:
-            assert destination_city in self.get_city(self.get_player_current_city(player)).get_neighbors()
-        if move.type == MovementAction.DIRECT_FLIGHT:
-            self._player_play_card(player, destination_city)
-        if move.type == MovementAction.CHARTER_FLIGHT:
-            self._player_play_card(player, self.get_player_current_city(player))
-        if move.type == MovementAction.SHUTTLE_FLIGHT:
+        if isinstance(move, DriveFerry):
+            assert destination_city in self.get_city_state(self.get_player_current_city(character)).get_neighbors()
+        if isinstance(move, DirectFlight):
+            self._player_play_card(character, destination_city)
+        if isinstance(move, CharterFlight):
+            self._player_play_card(character, self.get_player_current_city(character))
+        if isinstance(move, ShuttleFlight):
             assert (
-                self.get_city(self.get_player_current_city(player)).has_research_station()
-                and self.get_city(destination_city).has_research_station()
+                self.get_city_state(self.get_player_current_city(character)).has_research_station()
+                and self.get_city_state(destination_city).has_research_station()
             )
+        if isinstance(move, OperationsFlight):
+            self._player_play_card(character, move.discard_card)
+            self._players[character].used_operations_expert_shuttle_move()
 
-        self._players[player].set_city(destination_city)
+        self.__move_player_to_city(character, destination_city)
 
     def get_players(self) -> Dict[Character, PlayerState]:
         return self._players
@@ -366,15 +394,22 @@ class State:
             character = self._active_player
 
         if isinstance(action, TreatDisease):
-            self._treat_city(action.city, action.target_virus)
+            self._treat_city(action.city, action.target_virus, times=1 if character != Character.MEDIC else 3)
         elif isinstance(action, BuildResearchStation):
-            self._player_play_card(character, action.city)
-            self.get_city(action.city).build_research_station()
-            self._research_stations -= 1
+            if character != Character.OPERATIONS_EXPERT:
+                self._player_play_card(character, action.city)
+            self.get_city_state(action.city).build_research_station()
+            if action.move_from:
+                self._cities[action.move_from].remove_research_station()
+            else:
+                self._research_stations -= 1
         elif isinstance(action, DiscoverCure):
             for card in action.card_combination:
                 self._player_play_card(character, card)
             self._cures[action.target_virus] = True
+            medic = self._players.get(Character.MEDIC, None)
+            if medic:
+                self._treat_city(medic.get_city(), action.target_virus, 3)
         elif isinstance(action, ShareKnowledge):
             self._player_play_card(action.player, action.card)
             self._players[action.target_player].add_card(action.card)
@@ -396,7 +431,7 @@ class State:
             for c in self._players.keys():
                 moves = moves.union(self.__possible_moves(c, player_state.get_city_cards()))
             for f, t in itertools.permutations(self._players.keys(), 2):
-                moves.add(Movement(MovementAction.DISPATCH, f, self.get_player_current_city(t)))
+                moves.add(Dispatch(f, self.get_player_current_city(t)))
 
             self._players.keys()
 
@@ -406,30 +441,46 @@ class State:
         player_state = self._players[character]
         current_city = player_state.get_city()
         # drives / ferries
-        moves = set(map(lambda c: Movement(MovementAction.DRIVE, character, c), self.get_neighbors(current_city)))
+        moves: Set[Movement] = set(map(lambda c: DriveFerry(character, c), self.get_neighbors(current_city)))
 
         # direct flights
-        direct_flights = set(Movement(MovementAction.DIRECT_FLIGHT, character, c) for c in city_cards if c != current_city)
+        direct_flights = set(DirectFlight(character, c) for c in city_cards if c != current_city)
 
         # charter flights
         charter_flights = set(
-            Movement(MovementAction.CHARTER_FLIGHT, character, c)
-            for c in (CITIES.keys() if current_city in city_cards else [])
+            CharterFlight(character, c)
+            for c in (self._cities.keys() if current_city in city_cards else [])
             if c != current_city
         )
         # shuttle flights between two cities with research station
         shuttle_flights: Set[Movement] = set()
-        if self.get_city(current_city).has_research_station():
+        if self.get_city_state(current_city).has_research_station():
             shuttle_flights = set(
-                Movement(MovementAction.SHUTTLE_FLIGHT, character, cid)
+                ShuttleFlight(character, cid)
                 for cid, loc in self.get_cities().items()
                 if loc.has_research_station() and cid != current_city
             )
 
-        return moves.union(direct_flights).union(charter_flights).union(shuttle_flights)
+        # operations expert charter flights
+        operation_flights: Set[Movement] = set()
+        if (
+            self._active_player == Character.OPERATIONS_EXPERT
+            and self.get_city_state(current_city).has_research_station()
+            and player_state.operations_expert_has_charter_flight()
+        ):
+            for card in player_state.get_city_cards():
+                operation_flights = operation_flights.union(
+                    {
+                        OperationsFlight(character, destination=c, discard_card=card)
+                        for c in self._cities.keys()
+                        if c != current_city
+                    }
+                )
+
+        return moves.union(direct_flights).union(charter_flights).union(shuttle_flights).union(operation_flights)
 
     def get_city_color(self, city: City) -> Virus:
-        return self.get_city(city).get_color()
+        return self.get_city_state(city).get_color()
 
     def get_game_condition(self) -> GameState:
         return self._game_state
@@ -446,16 +497,28 @@ class State:
         possible_actions: Set[ActionInterface] = set()
 
         # What is treatable?
-        for virus, count in self.get_city(current_city).get_viral_state().items():
+        for virus, count in self.get_city_state(current_city).get_viral_state().items():
             if count > 0:
                 possible_actions.add(TreatDisease(current_city, target_virus=virus))
 
         # Can I build research station?
-        if current_city in player.get_cards() and self._research_stations > 0:
-            possible_actions.add(BuildResearchStation(current_city))
+        if (
+            not self._cities[current_city].has_research_station()
+            and current_city in player.get_cards()
+            or character == Character.OPERATIONS_EXPERT
+        ):
+            possible_actions = possible_actions.union(
+                {
+                    BuildResearchStation(current_city, move_from=c)
+                    for c, s in self._cities.items()
+                    if s.has_research_station()
+                }
+                if self._research_stations == 0
+                else {BuildResearchStation(current_city)}
+            )
 
         # Can I discover a cure at this situation?
-        if self.get_city(current_city).has_research_station():
+        if self.get_city_state(current_city).has_research_station():
             player_card_viruses = [self.get_city_color(card) for card in player.get_cards() if isinstance(card, City)]
             for virus, count in Counter(player_card_viruses).items():
                 cards_for_cure = 4 if character == Character.SCIENTIST else 5
@@ -468,21 +531,21 @@ class State:
                         possible_actions.add(DiscoverCure(target_virus=virus, card_combination=frozenset(cure_cards)))
 
         # Can I share knowledge?
-        players_in_city = {c: p for c, p in self._players.items() if p.get_city() == current_city}
+        players_in_city: Dict[Character, PlayerState] = {
+            c: p for c, p in self._players.items() if p.get_city() == current_city
+        }
         if len(players_in_city) > 1:
-            for pc, p in players_in_city.items():
-                if current_city in p.get_cards():
-                    if pc == character:
-                        # give card to other player
-                        share_with_others = set(
-                            ShareKnowledge(card=current_city, player=character, target_player=other)
-                            for other in players_in_city.keys()
-                            if other != character
-                        )
-                        possible_actions = possible_actions.union(share_with_others)
-                    else:
-                        # get card from other player
-                        possible_actions.add(ShareKnowledge(card=current_city, player=pc, target_player=character))
+            possible_actions = possible_actions.union(
+                self.__check_oldschool_knowledge_sharing(character, players_in_city)
+            )
+            # Researcher
+            researcher = players_in_city.get(Character.RESEARCHER, {})
+            for card in researcher and researcher.get_city_cards():
+                possible_actions = possible_actions.union(
+                    ShareKnowledge(Character.RESEARCHER, card, target_player=other)
+                    for other in players_in_city.keys()
+                    if other != character.RESEARCHER
+                )
 
         # Contigency Planner
         if character == Character.CONTINGENCY_PLANNER and not self._players[character].get_contingency_planner_card():
@@ -491,22 +554,46 @@ class State:
 
         return possible_actions
 
+    def __check_oldschool_knowledge_sharing(
+        self, character: Character, players_in_city: Dict[Character, PlayerState]
+    ) -> Set[ActionInterface]:
+        possible_actions: Set[ActionInterface] = set()
+        current_city = self.get_player_current_city(character)
+        for c, ps in filter(lambda pst: current_city in pst[1].get_cards(), players_in_city.items()):
+            if c == character:
+                # give card to other player
+                share_with_others = set(
+                    ShareKnowledge(card=current_city, player=character, target_player=other)
+                    for other in players_in_city.keys()
+                    if other != character
+                )
+                possible_actions = possible_actions.union(share_with_others)
+            else:
+                # get card from other player
+                possible_actions.add(ShareKnowledge(card=current_city, player=c, target_player=character))
+        return possible_actions
+
     def event_action(self, event: Event):
         if isinstance(event, Forecast):
             self._infection_deck[:6] = event.forecast
             self._player_play_card(event.player, EventCard.FORECAST)
         elif isinstance(event, GovernmentGrant):
-            self.get_city(event.target_city).build_research_station()
+            self.get_city_state(event.target_city).build_research_station()
             self._player_play_card(event.player, EventCard.GOVERNMENT_GRANT)
         elif isinstance(event, Airlift):
-            self._players[event.target_player].set_city(event.destination)
+            self.__move_player_to_city(event.target_player, event.destination)
             self._player_play_card(event.player, EventCard.AIRLIFT)
         elif isinstance(event, ResilientPopulation):
             self._infection_discard_pile.remove(event.discard_city)
             self._player_play_card(event.player, EventCard.RESILIENT_POPULATION)
         elif isinstance(event, OneQuietNight):
-            self._resilient = True
+            self._one_quiet_night = True
             self._player_play_card(event.player, EventCard.ONE_QUIET_NIGHT)
+
+    def __move_player_to_city(self, character: Character, city: City):
+        if character == Character.MEDIC:
+            [self._treat_city(city, color=c, times=3) for c, y in self._cures.items() if y]
+        self._players[character].set_city(city)
 
     def _player_play_card(self, player: Character, card: Card):
         if self._players[player].remove_card(card):

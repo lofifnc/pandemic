@@ -10,6 +10,7 @@ class PlayerState:
         self._cards: Set[Card] = set()
         # character specific state
         self._contingency_planner_card: Optional[Card] = None
+        self._operations_expert_special_shuttle = True
 
     def get_city(self) -> City:
         return self._city
@@ -58,3 +59,12 @@ class PlayerState:
 
     def set_contingency_planner_card(self, card: Card):
         self._contingency_planner_card = card
+
+    def used_operations_expert_shuttle_move(self):
+        self._operations_expert_special_shuttle = False
+
+    def signal_turn_end(self):
+        self._operations_expert_special_shuttle = True
+
+    def operations_expert_has_charter_flight(self) -> bool:
+        return self._operations_expert_special_shuttle

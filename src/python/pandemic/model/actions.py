@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import FrozenSet, Tuple
 
 from pandemic.model.city_id import City, Card
-from pandemic.model.enums import MovementAction, Virus, Character
+from pandemic.model.enums import Virus, Character
 from pandemic.utils import iterable_to_string
 
 
@@ -15,15 +15,57 @@ class ActionInterface:
 class Movement(ActionInterface):
     PREFIX = "m"
 
-    type: MovementAction
+    command = None
     player: Character
     destination: City
 
     def to_command(self):
-        return f"{self.PREFIX} {self.type.command} {self.destination.name.lower()} {self.player.name.lower()}"
+        return f"{self.PREFIX} {self.command} {self.destination.name.lower()} {self.player.name.lower()}"
 
-    def __repr__(self):
-        return f"{self.type.name}: {self.destination}"
+
+@dataclass(frozen=True)
+class DriveFerry(Movement):
+    command = "d"
+
+
+@dataclass(frozen=True)
+class DirectFlight(Movement):
+    command = "f"
+
+
+@dataclass(frozen=True)
+class CharterFlight(Movement):
+    command = "c"
+
+
+@dataclass(frozen=True)
+class ShuttleFlight(Movement):
+    command = "s"
+
+
+@dataclass(frozen=True)
+class Dispatch(Movement):
+    command = "d"
+
+
+@dataclass(frozen=True)
+class OperationsFlight(Movement):
+    command = "o"
+    discard_card: City
+
+    def to_command(self):
+        return f"{super().to_command()} {self.discard_card.name.lower()}"
+
+
+@dataclass(frozen=True)
+class OperationsExpertCharterFlight(Movement):
+    discard_card: City
+
+    def to_command(self):
+        return (
+            f"{self.PREFIX} {self.type.command} {self.destination.name.lower()}"
+            f" {self.player.name.lower()} {self.discard_card.name.lower()}"
+        )
 
 
 #################
@@ -47,7 +89,6 @@ class ShareKnowledge(Other):
 
 @dataclass(frozen=True)
 class TreatDisease(Other):
-
     city: City
     target_virus: Virus
 
@@ -57,7 +98,6 @@ class TreatDisease(Other):
 
 @dataclass(frozen=True)
 class DiscoverCure(Other):
-
     card_combination: FrozenSet[City]
     target_virus: Virus
 
@@ -68,9 +108,10 @@ class DiscoverCure(Other):
 @dataclass(frozen=True)
 class BuildResearchStation(Other):
     city: City
+    move_from: City = None
 
     def to_command(self):
-        return f"{self.PREFIX} b {self.city.name.lower()}"
+        return f"{self.PREFIX} b {self.city.name.lower()}{' ' + self.move_from.name.lower() if self.move_from else ''}"
 
 
 @dataclass(frozen=True)
@@ -95,7 +136,6 @@ class Event(ActionInterface):
 
 @dataclass(frozen=True)
 class Forecast(Event):
-
     forecast: Tuple[City]
 
     def to_command(self):
@@ -138,12 +178,10 @@ class OneQuietNight(Event):
 
 @dataclass(frozen=True)
 class ThrowCard(ActionInterface):
-
     PREFIX = "t"
 
     player: Character
     card: Card
 
     def to_command(self):
-
         return f"{self.PREFIX} {self.player.name.lower()} {self.card.name.lower()}"

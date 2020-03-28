@@ -18,7 +18,7 @@ from pandemic.gui.autocomplete_entry import AutocompleteEntry
 from pandemic.model.enums import Character, Virus
 from pandemic.model.citystate import CityState
 from pandemic.state import CONNECTIONS, State
-from pandemic.state import CITIES, City
+from pandemic.state import City
 
 RESEARCH_LAT = -50
 
@@ -95,8 +95,8 @@ class Visualization:
 
         # Add connections
         for conn in CONNECTIONS:
-            start = CITIES[conn[0]]
-            end = CITIES[conn[1]]
+            start = state.get_cities()[conn[0]]
+            end = state.get_cities()[conn[1]]
 
             self._ax.plot(
                 [start.get_lon(), end.get_lon()],
@@ -132,7 +132,7 @@ class Visualization:
             self.mark_research_station(location)
 
         for character, player in state.get_players().items():
-            location = state.get_city(player.get_city())
+            location = state.get_city_state(player.get_city_state())
             self._player[character] = self._ax.plot(
                 location.get_lon(),
                 location.get_lat(),
@@ -183,7 +183,7 @@ class Visualization:
             self.update_virus_state(city_id, city_state)
 
         for color, player in state.get_players().items():
-            city_state = state.get_city(player.get_city())
+            city_state = state.get_city_state(player.get_city())
             self._player[color].set_xdata(city_state.get_lon())
             self._player[color].set_ydata(city_state.get_lat())
             self.mark_research_station(city_state)

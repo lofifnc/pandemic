@@ -98,3 +98,6 @@ class CityState:
 
     def build_research_station(self):
         self._research_station = True
+
+    def remove_research_station(self):
+        self._research_station = False
