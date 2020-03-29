@@ -45,7 +45,7 @@ class Simulation:
             if all(value for value in state.cures.values()):
                 state.game_state = GameState.WIN
             state.actions_left -= 1
-        if state.actions_left == 0:
+        if state.actions_left == 0 and state.phase == Phase.ACTIONS:
             state.actions_left = PLAYER_ACTIONS
             state.phase = Phase.DRAW_CARDS
 
@@ -56,7 +56,7 @@ class Simulation:
             player = state.active_player
 
         possible_actions: List[ActionInterface] = get_possible_event_actions(state)
-        if state.phase == Phase.FORECAST:
+        if state.phase == Phase.FORECAST or state.phase == Phase.MOVE_STATION:
             return possible_actions
 
         # check all players for hand limit and prompt action

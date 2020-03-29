@@ -20,6 +20,7 @@ class Phase(Enum):
     INFECTIONS = 3
     EPIDEMIC = 4
     FORECAST = 5
+    MOVE_STATION = 6
 
 
 class State:
@@ -48,6 +49,7 @@ class State:
         # phase specific state
         self.drawn_cards = 0
         self.infections_steps = 0
+        self.last_build_research_station = City.ATLANTA
 
         # cards
         self.cities = create_cities_init_state()
@@ -154,9 +156,6 @@ class State:
             [ps.signal_turn_end() for ps in self.players.values()]
             self.active_player = self.get_next_player()
             self.phase = Phase.ACTIONS
-
-    def active_player(self) -> PlayerState:
-        return self.players[self.active_player]
 
     def get_next_player(self) -> Character:
         list_of_player_colors = list(self.players.keys())

@@ -8,6 +8,7 @@ from pandemic.simulation.model.actions import (
     Dispatch,
     TreatDisease,
     DiscoverCure,
+    MoveResearchStation,
 )
 from pandemic.simulation.model.city_id import City, EventCard
 from pandemic.simulation.model.enums import Character, Virus
@@ -223,11 +224,16 @@ class TestCharacters:
 
         simulation.step(DriveFerry(Character.SCIENTIST, City.NEW_YORK))
         assert not simulation.state.cities[City.NEW_YORK].has_research_station()
-        build = BuildResearchStation(city=City.NEW_YORK, move_from=City.ATLANTA)
-        assert {build, BuildResearchStation(city=City.NEW_YORK, move_from=City.WASHINGTON)}.issubset(
+        build = BuildResearchStation(city=City.NEW_YORK)
+        simulation.step(build)
+
+        move_station = MoveResearchStation(Character.SCIENTIST, City.ATLANTA)
+        assert {MoveResearchStation(Character.SCIENTIST, City.WASHINGTON), move_station} == set(
             simulation.get_possible_actions()
         )
-        simulation.step(build)
+        simulation.step(move_station)
+
         assert simulation.state.research_stations == 0
         assert simulation.state.cities[City.NEW_YORK].has_research_station()
         assert not simulation.state.cities[City.ATLANTA].has_research_station()
+        assert simulation.state.phase == Phase.ACTIONS

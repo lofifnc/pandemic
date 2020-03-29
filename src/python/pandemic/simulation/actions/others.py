@@ -14,7 +14,7 @@ from pandemic.simulation.model.actions import (
 )
 from pandemic.simulation.model.enums import Character
 from pandemic.simulation.model.playerstate import PlayerState
-from pandemic.simulation.state import State, City
+from pandemic.simulation.state import State, City, Phase
 
 
 def other_action(state: State, action: Other, character: Character = None):
@@ -26,11 +26,7 @@ def other_action(state: State, action: Other, character: Character = None):
     elif isinstance(action, BuildResearchStation):
         if character != Character.OPERATIONS_EXPERT:
             state.play_card(character, action.city)
-        state.get_city_state(action.city).build_research_station()
-        if action.move_from:
-            state.cities[action.move_from].remove_research_station()
-        else:
-            state.research_stations -= 1
+        build_research_station(state, action.city)
     elif isinstance(action, DiscoverCure):
         for card in action.card_combination:
             state.play_card(character, card)
@@ -68,15 +64,7 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
         and current_city in player.get_cards()
         or character == Character.OPERATIONS_EXPERT
     ):
-        possible_actions.extend(
-            [
-                BuildResearchStation(current_city, move_from=c)
-                for c, s in state.cities.items()
-                if s.has_research_station()
-            ]
-            if state.research_stations == 0
-            else [BuildResearchStation(current_city)]
-        )
+        possible_actions.append(BuildResearchStation(current_city))
 
     # Can I discover a cure at this situation?
     if state.get_city_state(current_city).has_research_station():
@@ -137,3 +125,13 @@ def __check_oldschool_knowledge_sharing(
 def throw_card_action(state: State, action: ThrowCard):
     assert isinstance(action, ThrowCard)
     state.play_card(action.player, action.card)
+
+
+def build_research_station(state: State, city: City):
+    if state.research_stations == 0:
+        state.previous_phase = state.phase
+        state.phase = Phase.MOVE_STATION
+    else:
+        state.research_stations -= 1
+    state.get_city_state(city).build_research_station()
+    state.last_build_research_station = city

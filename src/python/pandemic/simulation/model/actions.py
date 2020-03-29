@@ -108,7 +108,6 @@ class DiscoverCure(Other):
 @dataclass(frozen=True)
 class BuildResearchStation(Other):
     city: City
-    move_from: City = None
 
     def to_command(self):
         return f"{self.PREFIX} b {self.city.name.lower()}{' ' + self.move_from.name.lower() if self.move_from else ''}"
@@ -132,6 +131,15 @@ class Event(ActionInterface):
     PREFIX = "e"
 
     player: Character
+
+
+@dataclass(frozen=True)
+class MoveResearchStation(Event):
+    player: Character
+    move_from: City
+
+    def to_command(self):
+        return f"{self.PREFIX} m ${self.player.name.lower()} {self.move_from.name.lower()}"
 
 
 @dataclass(frozen=True)
