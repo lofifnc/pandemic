@@ -2,7 +2,7 @@ from tkinter import *
 import re
 from typing import List, Callable
 
-from pandemic.simulation.gui.gui_simulation import Simulation
+from pandemic.simulation.gui.gui_simulation import GuiSimulation
 from pandemic.simulation.gui.trie import Trie
 from pandemic.simulation.state import State
 
@@ -12,9 +12,9 @@ class AutocompleteEntry(Entry):
 
         Entry.__init__(self, *args, **kwargs)
         self._callback = callback
-        self.simulation = Simulation()
+        self.gui_simulation = GuiSimulation()
         self.trie = Trie()
-        self.trie.insert_set(self.simulation.get_possible_moves())
+        self.trie.insert_set(self.gui_simulation.get_possible_moves())
         self.var = self["textvariable"]
         if self.var == "":
             self.var = self["textvariable"] = StringVar()
@@ -87,11 +87,11 @@ class AutocompleteEntry(Entry):
     def submit(self, event):
         self.selection(event)
         command = self.var.get()
-        self.simulation.perform_action(command)
+        self.gui_simulation.perform_action(command)
         self.var.set("")
-        self._callback(self.simulation.state)
+        self._callback(self.gui_simulation.simulation.state)
         self.trie.clear()
-        self.trie.insert_set(self.simulation.get_possible_moves())
+        self.trie.insert_set(self.gui_simulation.get_possible_moves())
         print("changed next round")
 
     def comparison(self) -> List[str]:

@@ -72,11 +72,11 @@ class Visualization:
         e1 = AutocompleteEntry(self.update_plot, self._window)
         e1.pack(side=TOP, fill=X, expand=0)
 
-        state = e1.simulation.state
+        state = e1.gui_simulation.simulation.state
 
         frame = Frame(self._window)
         frame.pack(side=TOP)
-        self._player_cards_label = Label(frame, text=state.player_cards_to_string())
+        self._player_cards_label = Label(frame, text=state.players[state.active_player].cards_to_string())
         self._player_cards_label.pack(side=LEFT)
         self._state_label = Label(frame, text=state.report())
         self._state_label.pack(side=LEFT)
@@ -95,8 +95,8 @@ class Visualization:
 
         # Add connections
         for conn in CONNECTIONS:
-            start = state.get_cities()[conn[0]]
-            end = state.get_cities()[conn[1]]
+            start = state.cities[conn[0]]
+            end = state.cities[conn[1]]
 
             self._ax.plot(
                 [start.get_lon(), end.get_lon()],
@@ -106,7 +106,7 @@ class Visualization:
                 transform=ccrs.Geodetic(),
             )
 
-        for city_id, location in state.get_cities().items():
+        for city_id, location in state.cities.items():
             city: Line2D = self._ax.plot(
                 location.get_lon(),
                 location.get_lat(),
@@ -131,8 +131,8 @@ class Visualization:
             self.draw_virus_state(city_id, location, city)
             self.mark_research_station(location)
 
-        for character, player in state.get_players().items():
-            location = state.get_city_state(player.get_city_state())
+        for character, player in state.players.items():
+            location = state.cities[player.get_city()]
             self._player[character] = self._ax.plot(
                 location.get_lon(),
                 location.get_lat(),
@@ -176,13 +176,13 @@ class Visualization:
         return f"{city_state.get_name()} {city_state.format_infection_state()}"
 
     def update_plot(self, state: State):
-        self._player_cards_label["text"] = state.player_cards_to_string()
+        self._player_cards_label["text"] = state.players[state.active_player].cards_to_string()
         self._state_label["text"] = state.report()
 
-        for city_id, city_state in state.get_cities().items():
+        for city_id, city_state in state.cities.items():
             self.update_virus_state(city_id, city_state)
 
-        for color, player in state.get_players().items():
+        for color, player in state.players.items():
             city_state = state.get_city_state(player.get_city())
             self._player[color].set_xdata(city_state.get_lon())
             self._player[color].set_ydata(city_state.get_lat())

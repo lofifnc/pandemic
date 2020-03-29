@@ -203,7 +203,7 @@ class State:
             ]
         ).format(
             active_player="%s:%s" % (self.active_player.name.lower(), self.actions_left),
-            player_deck_size=len(self._player_deck),
+            player_deck_size=len(self.player_deck),
             infection_rate=self.infection_rate(),
             outbreaks=self.outbreaks,
             min_cubes="%s:%s" % (min_cubes.name, self.cubes[min_cubes]),
