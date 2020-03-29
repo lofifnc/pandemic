@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import FrozenSet, Tuple
 
-from pandemic.model.city_id import City, Card
-from pandemic.model.enums import Virus, Character
-from pandemic.utils import iterable_to_string
+from pandemic.simulation.model.city_id import City, Card
+from pandemic.simulation.model.enums import Virus, Character
+from pandemic.simulation.utils import iterable_to_string
 
 
 class ActionInterface:
@@ -136,6 +136,12 @@ class Event(ActionInterface):
 
 @dataclass(frozen=True)
 class Forecast(Event):
+    def to_command(self):
+        return f"{self.PREFIX} f ${self.player.name.lower()}"
+
+
+@dataclass(frozen=True)
+class ForecastOrder(Event):
     forecast: Tuple[City]
 
     def to_command(self):

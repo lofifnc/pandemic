@@ -1,7 +1,7 @@
 from typing import Set, Dict
 
-from pandemic.model.actions import ActionInterface
-from pandemic.state import State
+from pandemic.simulation.model.actions import ActionInterface
+from pandemic.simulation.state import State
 
 
 class Simulation:

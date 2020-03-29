@@ -1,7 +1,7 @@
 from typing import Set, Dict
 
-from pandemic.model.city_id import City
-from pandemic.model.enums import Virus
+from pandemic.simulation.model.city_id import City
+from pandemic.simulation.model.enums import Virus
 
 
 class CityState:

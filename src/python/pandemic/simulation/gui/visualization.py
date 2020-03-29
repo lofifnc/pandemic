@@ -14,11 +14,11 @@ from matplotlib.text import Text
 from matplotlib import transforms
 from collections import defaultdict
 
-from pandemic.gui.autocomplete_entry import AutocompleteEntry
-from pandemic.model.enums import Character, Virus
-from pandemic.model.citystate import CityState
-from pandemic.state import CONNECTIONS, State
-from pandemic.state import City
+from pandemic.simulation.gui.autocomplete_entry import AutocompleteEntry
+from pandemic.simulation.model.enums import Character
+from pandemic.simulation.model.citystate import CityState
+from pandemic.simulation.state import CONNECTIONS, State
+from pandemic.simulation.state import City
 
 RESEARCH_LAT = -50
 
@@ -106,7 +106,7 @@ class Visualization:
                 transform=ccrs.Geodetic(),
             )
 
-        for city_id, location in CITIES.items():
+        for city_id, location in state.get_cities().items():
             city: Line2D = self._ax.plot(
                 location.get_lon(),
                 location.get_lat(),

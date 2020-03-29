@@ -2,9 +2,9 @@ from tkinter import *
 import re
 from typing import List, Callable
 
-from pandemic.gui.gui_simulation import Simulation
-from pandemic.gui.trie import Trie
-from pandemic.state import State
+from pandemic.simulation.gui.gui_simulation import Simulation
+from pandemic.simulation.gui.trie import Trie
+from pandemic.simulation.state import State
 
 
 class AutocompleteEntry(Entry):

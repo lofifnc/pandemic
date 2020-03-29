@@ -1,11 +1,11 @@
 from typing import Dict
 
-from pandemic.model.city_id import City
-from pandemic.model.enums import Virus
-from pandemic.model.citystate import CityState
+from pandemic.simulation.model.city_id import City
+from pandemic.simulation.model.enums import Virus
+from pandemic.simulation.model.citystate import CityState
 
 
-def create_cities_init_state() -> Dict[City, CityState] :
+def create_cities_init_state() -> Dict[City, CityState]:
     return {
         City.ALGIERS: CityState("Algiers", 36.7753606, 3.0601882, Virus.BLUE),
         City.ATLANTA: CityState("Atlanta", 33.7490987, -84.3901849, Virus.BLUE, research_station=True),
@@ -56,6 +56,7 @@ def create_cities_init_state() -> Dict[City, CityState] :
         City.TOKYO: CityState("Tokyo", 35.6828387, 139.7594549, Virus.RED),
         City.WASHINGTON: CityState("Washington", 38.8948932, -77.0365529, Virus.BLUE),
     }
+
 
 CONNECTIONS: (City, City) = [
     (City.SAN_FRANCISCO, City.TOKYO),

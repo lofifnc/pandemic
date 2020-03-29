@@ -52,7 +52,7 @@ cities = [
     "Tokyo",
     "Washington",
 ]
-API_KEY = "c36e65e4889d4e74b5233b7f02fe7c8c"
+API_KEY = "..."
 
 "https://api.opencagedata.com/geocode/v1/json?q=PLACENAME&key=YOUR-API-KEY"
 

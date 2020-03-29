@@ -1,7 +1,7 @@
 from typing import List, Set, Optional
 
-from pandemic.model.city_id import Card, EventCard
-from pandemic.model.constants import *
+from pandemic.simulation.model.city_id import Card, EventCard
+from pandemic.simulation.model.constants import *
 
 
 class PlayerState:
@@ -68,3 +68,6 @@ class PlayerState:
 
     def operations_expert_has_charter_flight(self) -> bool:
         return self._operations_expert_special_shuttle
+
+    def cards_to_string(self) -> str:
+        return " ".join(map(lambda x: x.name.lower(), self.get_cards()))
