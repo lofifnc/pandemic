@@ -18,7 +18,7 @@ class TestGeneral:
     def test_cure_virus():
         simulation = create_less_random_simulation(start_player=Character.RESEARCHER)
 
-        simulation.state.players[Character.RESEARCHER]._cards = {
+        simulation.state.players[Character.RESEARCHER]._city_cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -39,14 +39,14 @@ class TestGeneral:
         assert not simulation.state.cures[Virus.BLUE]
         assert not simulation.state.cures[Virus.BLACK]
         assert not simulation.state.cures[Virus.YELLOW]
-        assert len(simulation.state.players[Character.RESEARCHER].get_cards()) == 0
+        assert len(simulation.state.players[Character.RESEARCHER].cards) == 0
 
     @staticmethod
     def test_already_cured_combination():
         simulation = create_less_random_simulation(start_player=Character.RESEARCHER)
 
         simulation.state.active_player = Character.RESEARCHER
-        simulation.state.players[Character.RESEARCHER]._cards = {
+        simulation.state.players[Character.RESEARCHER]._city_cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -70,7 +70,7 @@ class TestGeneral:
         simulation = create_less_random_simulation(start_player=Character.RESEARCHER)
 
         simulation.state.active_player = Character.RESEARCHER
-        simulation.state.players[Character.RESEARCHER]._cards = {
+        simulation.state.players[Character.RESEARCHER]._city_cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -153,8 +153,8 @@ class TestGeneral:
         assert sharing_action in simulation.get_possible_actions()
 
         simulation.step(sharing_action)
-        assert City.ATLANTA not in simulation.state.players[other_player].get_cards()
-        assert City.ATLANTA in simulation.state.players[active_player].get_cards()
+        assert City.ATLANTA not in simulation.state.players[other_player].cards
+        assert City.ATLANTA in simulation.state.players[active_player].cards
 
         assert sharing_action not in simulation.get_possible_actions()
 
@@ -172,8 +172,8 @@ class TestGeneral:
 
         simulation.step(sharing_action)
 
-        assert City.ATLANTA not in simulation.state.players[active_player].get_cards()
-        assert City.ATLANTA in simulation.state.players[other_player].get_cards()
+        assert City.ATLANTA not in simulation.state.players[active_player].cards
+        assert City.ATLANTA in simulation.state.players[other_player].cards
 
         assert sharing_action not in simulation.get_possible_actions()
 
@@ -247,7 +247,7 @@ class TestGeneral:
         simulation = create_less_random_simulation(start_player=Character.RESEARCHER)
 
         # cheat and pretend virus is eradicated
-        simulation.state.players[Character.RESEARCHER]._cards = {
+        simulation.state.players[Character.RESEARCHER]._city_cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -271,7 +271,7 @@ class TestGeneral:
         simulation = create_less_random_simulation()
 
         # cheat and pretend virus is eradicated
-        simulation.state.players[Character.SCIENTIST]._cards = {
+        simulation.state.players[Character.SCIENTIST]._city_cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -301,7 +301,7 @@ class TestGeneral:
         simulation = create_less_random_simulation()
 
         # cheat and pretend virus is eradicated
-        simulation.state.players[Character.SCIENTIST]._cards = {
+        simulation.state.players[Character.SCIENTIST].add_cards([
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -310,7 +310,7 @@ class TestGeneral:
             City.SYDNEY,
             City.ALGIERS,
             EventCard.ONE_QUIET_NIGHT,
-        }
+        ])
 
         assert len(simulation.get_possible_actions()) == 9
         assert all(map(lambda c: isinstance(c, ThrowCard) or isinstance(c, Event), simulation.get_possible_actions()))
@@ -325,7 +325,7 @@ class TestGeneral:
         simulation = create_less_random_simulation()
 
         # cheat and pretend virus is eradicated
-        simulation.state.players[Character.SCIENTIST]._cards = {
+        simulation.state.players[Character.SCIENTIST].add_cards([
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -334,7 +334,7 @@ class TestGeneral:
             City.SYDNEY,
             City.ALGIERS,
             EventCard.ONE_QUIET_NIGHT,
-        }
+        ])
 
         assert len(simulation.get_possible_actions()) == 9
         assert all(map(lambda c: isinstance(c, ThrowCard) or isinstance(c, Event), simulation.get_possible_actions()))
@@ -355,7 +355,7 @@ class TestGeneral:
         simulation.state.cures[Virus.YELLOW] = True
         assert simulation.state.game_state == GameState.RUNNING
 
-        simulation.state.players[Character.RESEARCHER]._cards = {
+        simulation.state.players[Character.RESEARCHER]._city_cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,

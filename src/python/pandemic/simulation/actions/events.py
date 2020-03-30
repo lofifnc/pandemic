@@ -54,12 +54,10 @@ def get_possible_event_actions(state: State) -> List[Event]:
         ]
 
     possible_actions: List[Event] = list()
+    extend = possible_actions.extend
     for player, player_state in state.players.items():
-        possible_actions.extend(
-            itertools.chain.from_iterable(
-                __action_for_event_card(state, player, card) for card in player_state.get_event_cards()
-            )
-        )
+        for card in player_state.event_cards:
+            extend(__action_for_event_card(state, player, card))
 
     return possible_actions
 
@@ -86,8 +84,9 @@ def __action_for_event_card(state: State, character: Character, event_card: Even
 
 
 def __get_forecast_order(state: State) -> List[Event]:
+    active_player = state.active_player
     return [
-        ForecastOrder(state.active_player, forecast=tuple(permutation))
+        ForecastOrder(active_player, forecast=tuple(permutation))
         for permutation in itertools.permutations(state.infection_deck[:6])
     ]
 
@@ -99,11 +98,12 @@ def __add_resilient_population(state: State, character: Character, possible_acti
 
 
 def __add_airlift(state: State, character: Character, possible_actions: List[Event]):
+    extend = possible_actions.extend
     for city in state.get_cities().keys():
-        possible_actions.extend(
+        extend(
             Airlift(player=character, target_player=p, destination=city)
             for p, c in state.players.items()
-            if c.get_city() != city
+            if c.city != city
         )
 
 

@@ -132,7 +132,7 @@ class Visualization:
             self.mark_research_station(location)
 
         for character, player in state.players.items():
-            location = state.cities[player.get_city()]
+            location = state.cities[player.city]
             self._player[character] = self._ax.plot(
                 location.get_lon(),
                 location.get_lat(),
@@ -183,7 +183,7 @@ class Visualization:
             self.update_virus_state(city_id, city_state)
 
         for color, player in state.players.items():
-            city_state = state.get_city_state(player.get_city())
+            city_state = state.get_city_state(player.city)
             self._player[color].set_xdata(city_state.get_lon())
             self._player[color].set_ydata(city_state.get_lat())
             self.mark_research_station(city_state)

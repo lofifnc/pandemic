@@ -10,7 +10,7 @@ from pandemic.simulation.state import State
 def create_less_random_simulation(start_player: Character = Character.SCIENTIST):
     state = State(player_count=2)
     player_state = PlayerState()
-    player_state.cards = {}
+    player_state.clear_cards()
     state.players = {
         start_player: PlayerState(),
         Character.RESEARCHER if start_player == Character.SCIENTIST else start_player.SCIENTIST: PlayerState(),

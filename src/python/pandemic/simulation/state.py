@@ -109,7 +109,7 @@ class State:
 
     def _character_location(self, char: Character) -> Optional[City]:
         state = self.players.get(char, None)
-        return state.get_city() if state else None
+        return state.city if state else None
 
     def _is_city_protected_by_quarantine(self, city) -> bool:
         if self.phase != Phase.SETUP and Character.QUARANTINE_SPECIALIST in self.players.keys():
@@ -133,7 +133,7 @@ class State:
 
     def draw_cards(self, action: ActionInterface):
         if self.drawn_cards < 2:
-            self.players[self.active_player].add_cards(self.draw_card())
+            self.players[self.active_player].add_card(self.draw_card())
             self.drawn_cards += 1
         if self.drawn_cards == 2:
             self.drawn_cards = 0
@@ -241,18 +241,18 @@ class State:
             self.game_state = GameState.LOST
             return []
 
-    def draw_card(self) -> List[Card]:
+    def draw_card(self) -> Optional[Card]:
         try:
             top_card = self.player_deck.pop(0)
             if isinstance(top_card, EpidemicCard):
                 self._epidemic_1st_part()
-                return []
+                return None
             else:
-                return [top_card]
+                return top_card
         except IndexError:
             logging.info("you lost no more cards")
             self.game_state = GameState.LOST
-            return []
+            return None
 
     """
     Function to simulate outbreaks
@@ -277,12 +277,12 @@ class State:
             player.add_cards(self.draw_player_cards(count=TOTAL_STARTING_PLAYER_CARDS - player_count))
 
     def get_player_current_city(self, player: Character) -> City:
-        return self.players[player].get_city()
+        return self.players[player].city
 
     def move_player_to_city(self, character: Character, city: City):
         if character == Character.MEDIC:
             [self.treat_city(city, color=c, times=3) for c, y in self.cures.items() if y]
-        self.players[character].set_city(city)
+        self.players[character].city = city
 
     def play_card(self, player: Character, card: Card):
         if self.players[player].remove_card(card):

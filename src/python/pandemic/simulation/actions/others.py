@@ -33,13 +33,13 @@ def other_action(state: State, action: Other, character: Character = None):
         state.cures[action.target_virus] = True
         medic = state.players.get(Character.MEDIC, None)
         if medic:
-            state.treat_city(medic.get_city(), action.target_virus, 3)
+            state.treat_city(medic.city, action.target_virus, 3)
     elif isinstance(action, ShareKnowledge):
         state.play_card(action.player, action.card)
         state.players[action.target_player].add_card(action.card)
     elif isinstance(action, ReserveCard):
         state.player_discard_pile.remove(action.card)
-        state.players[character].set_contingency_planner_card(action.card)
+        state.players[character].contingency_planner_card = action.card
 
 
 def get_possible_other_actions(state: State, character: Character = None) -> List[ActionInterface]:
@@ -50,7 +50,7 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
 
     player = state.players[character]
 
-    current_city = player.get_city()
+    current_city = player.city
     possible_actions: List[ActionInterface] = list()
 
     # What is treatable?
@@ -61,33 +61,31 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
     # Can I build research station?
     if (
         not state.cities[current_city].has_research_station()
-        and current_city in player.get_cards()
+        and current_city in player.cards
         or character == Character.OPERATIONS_EXPERT
     ):
         possible_actions.append(BuildResearchStation(current_city))
 
     # Can I discover a cure at this situation?
     if state.get_city_state(current_city).has_research_station():
-        player_card_viruses = [state.cities[card].get_color() for card in player.get_cards() if isinstance(card, City)]
+        player_card_viruses = [state.cities[card].get_color() for card in player.cards if isinstance(card, City)]
         for virus, count in Counter(player_card_viruses).items():
             cards_for_cure = 4 if character == Character.SCIENTIST else 5
             if count >= cards_for_cure and not state.cures[virus]:
                 potential_cure_cards: List[City] = list(
-                    filter(lambda c: state.cities[c].get_color() == virus, player.get_city_cards())
+                    filter(lambda c: state.cities[c].get_color() == virus, player.city_cards)
                 )
 
                 for cure_cards in list(itertools.combinations(potential_cure_cards, cards_for_cure)):
                     possible_actions.append(DiscoverCure(target_virus=virus, card_combination=frozenset(cure_cards)))
 
     # Can I share knowledge?
-    players_in_city: Dict[Character, PlayerState] = {
-        c: p for c, p in state.players.items() if p.get_city() == current_city
-    }
+    players_in_city: Dict[Character, PlayerState] = {c: p for c, p in state.players.items() if p.city == current_city}
     if len(players_in_city) > 1:
         possible_actions.extend(__check_oldschool_knowledge_sharing(state, character, players_in_city))
         # Researcher
         researcher = players_in_city.get(Character.RESEARCHER, {})
-        for card in researcher and researcher.get_city_cards():
+        for card in researcher and researcher.city_cards:
             possible_actions.extend(
                 ShareKnowledge(Character.RESEARCHER, card, target_player=other)
                 for other in players_in_city.keys()
@@ -95,7 +93,7 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
             )
 
     # Contigency Planner
-    if character == Character.CONTINGENCY_PLANNER and not state.players[character].get_contingency_planner_card():
+    if character == Character.CONTINGENCY_PLANNER and not state.players[character].contingency_planner_card:
         for card in state.player_discard_pile:
             possible_actions.append(ReserveCard(card))
 
@@ -107,7 +105,7 @@ def __check_oldschool_knowledge_sharing(
 ) -> Set[ActionInterface]:
     possible_actions: Set[ActionInterface] = set()
     current_city = state.get_player_current_city(character)
-    for c, ps in filter(lambda pst: current_city in pst[1].get_cards(), players_in_city.items()):
+    for c, ps in filter(lambda pst: current_city in pst[1].cards, players_in_city.items()):
         if c == character:
             # give card to other player
             share_with_others = set(

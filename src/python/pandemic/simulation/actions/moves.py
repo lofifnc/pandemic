@@ -42,12 +42,12 @@ def get_possible_move_actions(state: State, character: Character = None) -> List
 
     player_state = state.players[character]
 
-    moves = __possible_moves(state, character, player_state.get_city_cards())
+    moves = __possible_moves(state, character, player_state.city_cards)
 
     # Dispatcher
     if character == Character.DISPATCHER:
         for c in state.players.keys():
-            moves.extend(__possible_moves(state, c, player_state.get_city_cards()))
+            moves.extend(__possible_moves(state, c, player_state.city_cards))
         for f, t in itertools.permutations(state.players.keys(), 2):
             moves.append(Dispatch(f, state.get_player_current_city(t)))
 
@@ -58,7 +58,7 @@ def get_possible_move_actions(state: State, character: Character = None) -> List
 
 def __possible_moves(state: State, character: Character, city_cards: Set[City]) -> List[Movement]:
     player_state = state.players[character]
-    current_city = player_state.get_city()
+    current_city = player_state.city
     # drives / ferries
     moves: List[Movement] = list(map(lambda c: DriveFerry(character, c), state.cities[current_city].get_neighbors()))
 
@@ -87,7 +87,7 @@ def __possible_moves(state: State, character: Character, city_cards: Set[City]) 
         and state.get_city_state(current_city).has_research_station()
         and player_state.operations_expert_has_charter_flight()
     ):
-        for card in player_state.get_city_cards():
+        for card in player_state.city_cards:
             operation_flights.extend(
                 {
                     OperationsFlight(character, destination=c, discard_card=card)

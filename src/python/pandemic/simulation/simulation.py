@@ -64,7 +64,7 @@ class Simulation:
         for color, p_state in state.players.items():
             if p_state.num_cards() > 7:
                 too_many_cards = True
-                possible_actions.extend(ThrowCard(color, c) for c in p_state.get_cards())
+                possible_actions.extend(ThrowCard(color, c) for c in p_state.cards)
 
         if too_many_cards:
             return possible_actions

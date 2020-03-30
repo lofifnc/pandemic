@@ -30,7 +30,7 @@ class TestEventCards:
         assert event in actions
         simulation.step(event)
         assert simulation.state.one_quiet_night
-        assert EventCard.ONE_QUIET_NIGHT not in simulation.state.players[active_player].get_cards()
+        assert EventCard.ONE_QUIET_NIGHT not in simulation.state.players[active_player].cards
         simulation.state.phase = Phase.INFECTIONS
         simulation.step(None)
         assert simulation.state.phase == Phase.ACTIONS
@@ -64,8 +64,8 @@ class TestEventCards:
         actions = simulation.get_possible_actions()
         assert event in actions
         simulation.step(event)
-        assert simulation.state.players[Character.RESEARCHER].get_city() == City.MANILA
-        assert EventCard.AIRLIFT not in simulation.state.players[active_player].get_cards()
+        assert simulation.state.players[Character.RESEARCHER].city == City.MANILA
+        assert EventCard.AIRLIFT not in simulation.state.players[active_player].cards
         assert EventCard.AIRLIFT in simulation.state.player_discard_pile
 
     @staticmethod
@@ -81,7 +81,7 @@ class TestEventCards:
         actions = simulation.get_possible_actions()
         assert event in actions
         simulation.step(event)
-        assert EventCard.FORECAST not in simulation.state.players[active_player].get_cards()
+        assert EventCard.FORECAST not in simulation.state.players[active_player].cards
         order = ForecastOrder(active_player, tuple(our_shuffle))
         assert order in simulation.get_possible_actions()
         assert len(list(simulation.get_possible_actions())) == math.factorial(6)

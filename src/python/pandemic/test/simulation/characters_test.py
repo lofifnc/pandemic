@@ -27,8 +27,8 @@ class TestCharacters:
         ability = ReserveCard(EventCard.ONE_QUIET_NIGHT)
         assert ability in simulation.get_possible_actions()
         simulation.step(ability)
-        assert simulation.state.players[active_player].get_contingency_planner_card() == EventCard.ONE_QUIET_NIGHT
-        assert EventCard.ONE_QUIET_NIGHT in simulation.state.players[active_player].get_cards()
+        assert simulation.state.players[active_player].contingency_planner_card == EventCard.ONE_QUIET_NIGHT
+        assert EventCard.ONE_QUIET_NIGHT in simulation.state.players[active_player].cards
         assert EventCard.ONE_QUIET_NIGHT not in simulation.state.player_discard_pile
 
         event = OneQuietNight(player=active_player)
@@ -36,15 +36,15 @@ class TestCharacters:
         assert event in actions
         simulation.step(event)
         assert simulation.state.one_quiet_night
-        assert EventCard.ONE_QUIET_NIGHT not in simulation.state.players[active_player].get_cards()
-        assert simulation.state.players[active_player].get_contingency_planner_card() is None
+        assert EventCard.ONE_QUIET_NIGHT not in simulation.state.players[active_player].cards
+        assert simulation.state.players[active_player].contingency_planner_card is None
         assert EventCard.ONE_QUIET_NIGHT not in simulation.state.player_discard_pile
 
     @staticmethod
     def test_dispatcher():
         simulation = create_less_random_simulation(start_player=Character.DISPATCHER)
         active_player = simulation.state.active_player
-        simulation.state.players[active_player].set_city(City.MADRID)
+        simulation.state.players[active_player].city = City.MADRID
 
         dispatch_self = Dispatch(active_player, City.ATLANTA)
         assert dispatch_self in simulation.get_possible_actions()
@@ -52,10 +52,10 @@ class TestCharacters:
         assert move_other_player in simulation.get_possible_actions()
         assert Dispatch(Character.SCIENTIST, City.MADRID) in simulation.get_possible_actions()
         simulation.step(dispatch_self)
-        assert simulation.state.players[active_player].get_city() == City.ATLANTA
+        assert simulation.state.players[active_player].city == City.ATLANTA
         assert move_other_player in simulation.get_possible_actions()
         simulation.step(move_other_player)
-        assert simulation.state.players[Character.SCIENTIST].get_city() == City.WASHINGTON
+        assert simulation.state.players[Character.SCIENTIST].city == City.WASHINGTON
 
     @staticmethod
     def test_medic():
@@ -72,9 +72,9 @@ class TestCharacters:
         simulation.state._infect_city(City.BANGKOK, times=3)
         simulation.state.cities[City.BANGKOK].build_research_station()
         assert simulation.state.cities[City.BANGKOK].get_viral_state()[Virus.RED] == 3
-        simulation.state.players[Character.MEDIC].set_city(City.BANGKOK)
+        simulation.state.players[Character.MEDIC].city = City.BANGKOK
 
-        simulation.state.players[Character.MEDIC]._cards = {
+        simulation.state.players[Character.MEDIC]._city_cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -109,19 +109,19 @@ class TestCharacters:
     def test_operations_export():
         simulation = create_less_random_simulation(start_player=Character.OPERATIONS_EXPERT)
 
-        simulation.state.players[Character.OPERATIONS_EXPERT]._cards = {City.BANGKOK, City.HO_CHI_MINH_CITY}
+        simulation.state.players[Character.OPERATIONS_EXPERT]._city_cards = {City.BANGKOK, City.HO_CHI_MINH_CITY}
 
         operations_flight = OperationsFlight(Character.OPERATIONS_EXPERT, City.MADRID, discard_card=City.BANGKOK)
         assert operations_flight in simulation.get_possible_actions()
         simulation.step(operations_flight)
-        assert simulation.state.players[Character.OPERATIONS_EXPERT].get_city() == City.MADRID
+        assert simulation.state.players[Character.OPERATIONS_EXPERT].city == City.MADRID
         assert not simulation.state.players[Character.OPERATIONS_EXPERT].operations_expert_has_charter_flight()
 
         build_research_station = BuildResearchStation(City.MADRID)
         assert build_research_station in simulation.get_possible_actions()
         simulation.step(build_research_station)
         assert simulation.state.cities[City.MADRID].has_research_station()
-        assert simulation.state.players[Character.OPERATIONS_EXPERT]._cards == {City.HO_CHI_MINH_CITY}
+        assert simulation.state.players[Character.OPERATIONS_EXPERT]._city_cards == {City.HO_CHI_MINH_CITY}
         assert not any(filter(lambda a: isinstance(a, OperationsFlight), simulation.get_possible_actions()))
 
     @staticmethod
@@ -160,7 +160,7 @@ class TestCharacters:
     def test_researcher():
         simulation = create_less_random_simulation(start_player=Character.RESEARCHER)
 
-        simulation.state.players[Character.RESEARCHER]._cards = {City.BANGKOK, City.HO_CHI_MINH_CITY}
+        simulation.state.players[Character.RESEARCHER]._city_cards = {City.BANGKOK, City.HO_CHI_MINH_CITY}
         share_knowledge = ShareKnowledge(Character.RESEARCHER, City.BANGKOK, Character.SCIENTIST)
         assert share_knowledge in simulation.get_possible_actions()
         assert (
@@ -168,8 +168,8 @@ class TestCharacters:
             in simulation.get_possible_actions()
         )
         simulation.step(share_knowledge)
-        assert simulation.state.players[Character.RESEARCHER].get_cards() == {City.HO_CHI_MINH_CITY}
-        assert simulation.state.players[Character.SCIENTIST].get_cards() == {City.BANGKOK}
+        assert simulation.state.players[Character.RESEARCHER].cards == {City.HO_CHI_MINH_CITY}
+        assert simulation.state.players[Character.SCIENTIST].cards == {City.BANGKOK}
 
         simulation.state.active_player = Character.SCIENTIST
         assert share_knowledge not in simulation.get_possible_actions()
@@ -182,7 +182,7 @@ class TestCharacters:
     def test_scientist():
         simulation = create_less_random_simulation(start_player=Character.SCIENTIST)
 
-        simulation.state.players[Character.SCIENTIST]._cards = {
+        simulation.state.players[Character.SCIENTIST]._city_cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -200,13 +200,13 @@ class TestCharacters:
         assert not simulation.state.cures[Virus.BLUE]
         assert not simulation.state.cures[Virus.BLACK]
         assert not simulation.state.cures[Virus.YELLOW]
-        assert len(simulation.state.players[Character.SCIENTIST].get_cards()) == 0
+        assert len(simulation.state.players[Character.SCIENTIST].cards) == 0
 
     @staticmethod
     def test_build_research_station():
         simulation = create_less_random_simulation(start_player=Character.SCIENTIST)
 
-        simulation.state.players[Character.SCIENTIST]._cards = {City.ATLANTA, City.WASHINGTON, City.NEW_YORK}
+        simulation.state.players[Character.SCIENTIST]._city_cards = {City.ATLANTA, City.WASHINGTON, City.NEW_YORK}
 
         build = BuildResearchStation(city=City.ATLANTA)
         assert build not in simulation.get_possible_actions()
@@ -218,7 +218,7 @@ class TestCharacters:
         assert simulation.state.research_stations == 5
         simulation.step(build)
         assert simulation.state.cities[City.WASHINGTON].has_research_station()
-        assert simulation.state.players[Character.SCIENTIST]._cards == {City.ATLANTA, City.NEW_YORK}
+        assert simulation.state.players[Character.SCIENTIST]._city_cards == {City.ATLANTA, City.NEW_YORK}
         assert simulation.state.research_stations == 4
         simulation.state.research_stations = 0
 
