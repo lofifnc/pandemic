@@ -301,16 +301,18 @@ class TestGeneral:
         simulation = create_less_random_simulation()
 
         # cheat and pretend virus is eradicated
-        simulation.state.players[Character.SCIENTIST].add_cards([
-            City.BANGKOK,
-            City.HO_CHI_MINH_CITY,
-            City.BEIJING,
-            City.MANILA,
-            City.HONG_KONG,
-            City.SYDNEY,
-            City.ALGIERS,
-            EventCard.ONE_QUIET_NIGHT,
-        ])
+        simulation.state.players[Character.SCIENTIST].add_cards(
+            [
+                City.BANGKOK,
+                City.HO_CHI_MINH_CITY,
+                City.BEIJING,
+                City.MANILA,
+                City.HONG_KONG,
+                City.SYDNEY,
+                City.ALGIERS,
+                EventCard.ONE_QUIET_NIGHT,
+            ]
+        )
 
         assert len(simulation.get_possible_actions()) == 9
         assert all(map(lambda c: isinstance(c, ThrowCard) or isinstance(c, Event), simulation.get_possible_actions()))
@@ -325,16 +327,18 @@ class TestGeneral:
         simulation = create_less_random_simulation()
 
         # cheat and pretend virus is eradicated
-        simulation.state.players[Character.SCIENTIST].add_cards([
-            City.BANGKOK,
-            City.HO_CHI_MINH_CITY,
-            City.BEIJING,
-            City.MANILA,
-            City.HONG_KONG,
-            City.SYDNEY,
-            City.ALGIERS,
-            EventCard.ONE_QUIET_NIGHT,
-        ])
+        simulation.state.players[Character.SCIENTIST].add_cards(
+            [
+                City.BANGKOK,
+                City.HO_CHI_MINH_CITY,
+                City.BEIJING,
+                City.MANILA,
+                City.HONG_KONG,
+                City.SYDNEY,
+                City.ALGIERS,
+                EventCard.ONE_QUIET_NIGHT,
+            ]
+        )
 
         assert len(simulation.get_possible_actions()) == 9
         assert all(map(lambda c: isinstance(c, ThrowCard) or isinstance(c, Event), simulation.get_possible_actions()))

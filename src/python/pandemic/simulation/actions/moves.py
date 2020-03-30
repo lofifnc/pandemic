@@ -60,7 +60,8 @@ def __possible_moves(state: State, character: Character, city_cards: Set[City]) 
     player_state = state.players[character]
     current_city = player_state.city
     # drives / ferries
-    moves: List[Movement] = list(map(lambda c: DriveFerry(character, c), state.cities[current_city].neighbors))
+    current_neighbors = state.cities[current_city].neighbors
+    moves: List[Movement] = [DriveFerry(character, c) for c in current_neighbors]
 
     # direct flights
     direct_flights = list(DirectFlight(character, c) for c in city_cards if c != current_city)
@@ -74,11 +75,12 @@ def __possible_moves(state: State, character: Character, city_cards: Set[City]) 
     # shuttle flights between two cities with research station
     shuttle_flights: List[Movement] = list()
     if state.get_city_state(current_city).has_research_station():
-        shuttle_flights = list(
+        city_states = state.get_cities().items()
+        shuttle_flights = [
             ShuttleFlight(character, cid)
-            for cid, loc in state.get_cities().items()
+            for cid, loc in city_states
             if loc.has_research_station() and cid != current_city
-        )
+        ]
 
     # operations expert charter flights
     operation_flights: List[Movement] = list()
@@ -87,13 +89,10 @@ def __possible_moves(state: State, character: Character, city_cards: Set[City]) 
         and state.get_city_state(current_city).has_research_station()
         and player_state.operations_expert_has_charter_flight()
     ):
-        for card in player_state.city_cards:
-            operation_flights.extend(
-                {
-                    OperationsFlight(character, destination=c, discard_card=card)
-                    for c in state.cities.keys()
-                    if c != current_city
-                }
-            )
+        cities = state.cities.keys()
+        operation_flights = [
+            OperationsFlight(character, destination=city, discard_card=card)
+            for city, card in itertools.product(cities, player_state.city_cards)
+        ]
 
     return moves + direct_flights + charter_flights + shuttle_flights + operation_flights

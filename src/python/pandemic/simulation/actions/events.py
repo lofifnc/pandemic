@@ -98,13 +98,11 @@ def __add_resilient_population(state: State, character: Character, possible_acti
 
 
 def __add_airlift(state: State, character: Character, possible_actions: List[Event]):
-    extend = possible_actions.extend
-    for city in state.get_cities().keys():
-        extend(
-            Airlift(player=character, target_player=p, destination=city)
-            for p, c in state.players.items()
-            if c.city != city
-        )
+    possible_actions.extend(
+        Airlift(player=character, target_player=p, destination=city)
+        for city, (p, c) in itertools.product(state.get_cities().keys(), state.players.items())
+        if c.city != city
+    )
 
 
 def __add_government_grant(state: State, character: Character, possible_actions: List[Event]):
