@@ -84,7 +84,7 @@ class State:
     def _infect_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
 
         outbreak_occurred = False
-        city_state = self.get_city_state(city)
+        city_state = self.cities[city]
         if color is None:
             color = city_state.color
 
@@ -96,7 +96,7 @@ class State:
             # virus has been eradicated or city is protected by medic or quarantine expert
             return outbreak_occurred
         for _ in itertools.repeat(None, times):
-            outbreak_occurred = self.get_city_state(city).inc_infection(color)
+            outbreak_occurred = self.cities[city].inc_infection(color)
             if outbreak_occurred:
                 break
 
@@ -119,12 +119,12 @@ class State:
 
     def treat_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
         is_empty = False
-        city_state = self.get_city_state(city)
+        city_state = self.cities[city]
         if color is None:
             color = city_state.color
 
         for _ in itertools.repeat(None, 3 if self.cures[color] else times):
-            is_empty = self.get_city_state(city).dec_infection(color)
+            is_empty = self.cities[city].dec_infection(color)
             if is_empty:
                 break
             self.cubes[color] += 1
@@ -146,7 +146,7 @@ class State:
             top_card = self.infection_deck.pop(0)
             outbreak = self._infect_city(top_card)
             if outbreak:
-                self._outbreak(top_card, self.get_city_state(top_card).color)
+                self._outbreak(top_card, self.cities[top_card].color)
             self.infection_discard_pile.append(top_card)
             self.infections_steps += 1
         if self.infections_steps == self.infection_rate() or self.one_quiet_night:
@@ -180,12 +180,6 @@ class State:
             start, end = con[0], con[1]
             self.cities[start].add_neighbor(end)
             self.cities[end].add_neighbor(start)
-
-    def get_cities(self) -> Dict[City, CityState]:
-        return self.cities
-
-    def get_city_state(self, city: City) -> CityState:
-        return self.cities[city]
 
     def infection_rate(self) -> int:
         return INFECTIONS_RATES[self._infection_rate_marker]
@@ -265,7 +259,7 @@ class State:
             self.outbreaks += 1
             if self.outbreaks > 7:
                 self.game_state = GameState.LOST
-            neighbors = self.get_city_state(city).neighbors
+            neighbors = self.cities[city].neighbors
             for n in neighbors:
                 has_outbreak = self._infect_city(n, color, 1)
                 if has_outbreak:

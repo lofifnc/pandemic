@@ -100,7 +100,7 @@ def __add_resilient_population(state: State, character: Character, possible_acti
 def __add_airlift(state: State, character: Character, possible_actions: List[Event]):
     possible_actions.extend(
         Airlift(player=character, target_player=p, destination=city)
-        for city, (p, c) in itertools.product(state.get_cities().keys(), state.players.items())
+        for city, (p, c) in itertools.product(state.cities.keys(), state.players.items())
         if c.city != city
     )
 

@@ -19,15 +19,15 @@ def move_player(state: State, move: Movement):
     character = move.player
 
     if isinstance(move, DriveFerry):
-        assert destination_city in state.get_city_state(state.get_player_current_city(character)).neighbors
+        assert destination_city in state.cities[state.get_player_current_city(character)].neighbors
     if isinstance(move, DirectFlight):
         state.play_card(state.active_player, destination_city)
     if isinstance(move, CharterFlight):
         state.play_card(state.active_player, state.get_player_current_city(character))
     if isinstance(move, ShuttleFlight):
         assert (
-            state.get_city_state(state.get_player_current_city(character)).has_research_station()
-            and state.get_city_state(destination_city).has_research_station()
+            state.cities[state.get_player_current_city(character)].has_research_station()
+            and state.cities[destination_city].has_research_station()
         )
     if isinstance(move, OperationsFlight):
         state.play_card(character, move.discard_card)
@@ -74,8 +74,8 @@ def __possible_moves(state: State, character: Character, city_cards: Set[City]) 
     ]
     # shuttle flights between two cities with research station
     shuttle_flights: List[Movement] = list()
-    if state.get_city_state(current_city).has_research_station():
-        city_states = state.get_cities().items()
+    if state.cities[current_city].has_research_station():
+        city_states = state.cities.items()
         shuttle_flights = [
             ShuttleFlight(character, cid)
             for cid, loc in city_states
@@ -86,7 +86,7 @@ def __possible_moves(state: State, character: Character, city_cards: Set[City]) 
     operation_flights: List[Movement] = list()
     if (
         state.active_player == Character.OPERATIONS_EXPERT
-        and state.get_city_state(current_city).has_research_station()
+        and state.cities[current_city].has_research_station()
         and player_state.operations_expert_has_charter_flight()
     ):
         cities = state.cities.keys()

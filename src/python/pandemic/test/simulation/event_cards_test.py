@@ -95,10 +95,10 @@ class TestEventCards:
 
         simulation.state.players[active_player].add_card(EventCard.GOVERNMENT_GRANT)
 
-        assert not simulation.state.get_city_state(City.BAGHDAD).has_research_station()
+        assert not simulation.state.cities[City.BAGHDAD].has_research_station()
         event = GovernmentGrant(player=active_player, target_city=City.BAGHDAD)
         actions = simulation.get_possible_actions()
         assert event in actions
         assert GovernmentGrant(player=active_player, target_city=City.ATLANTA) not in actions
         simulation.step(event)
-        assert simulation.state.get_city_state(City.BAGHDAD).has_research_station()
+        assert simulation.state.cities[City.BAGHDAD].has_research_station()
