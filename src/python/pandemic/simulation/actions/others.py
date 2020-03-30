@@ -68,12 +68,12 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
 
     # Can I discover a cure at this situation?
     if state.get_city_state(current_city).has_research_station():
-        player_card_viruses = [state.cities[card].get_color() for card in player.cards if isinstance(card, City)]
+        player_card_viruses = [state.cities[card].color for card in player.cards if isinstance(card, City)]
         for virus, count in Counter(player_card_viruses).items():
             cards_for_cure = 4 if character == Character.SCIENTIST else 5
             if count >= cards_for_cure and not state.cures[virus]:
                 potential_cure_cards: List[City] = list(
-                    filter(lambda c: state.cities[c].get_color() == virus, player.city_cards)
+                    filter(lambda c: state.cities[c].color == virus, player.city_cards)
                 )
 
                 for cure_cards in list(itertools.combinations(potential_cure_cards, cards_for_cure)):

@@ -86,7 +86,7 @@ class State:
         outbreak_occurred = False
         city_state = self.get_city_state(city)
         if color is None:
-            color = city_state.get_color()
+            color = city_state.color
 
         if (
             self._is_city_protected_by_quarantine(city)
@@ -114,14 +114,14 @@ class State:
     def _is_city_protected_by_quarantine(self, city) -> bool:
         if self.phase != Phase.SETUP and Character.QUARANTINE_SPECIALIST in self.players.keys():
             location = self._character_location(Character.QUARANTINE_SPECIALIST)
-            return city in self.cities[location].get_neighbors().union([location])
+            return city in self.cities[location].neighbors.union([location])
         return False
 
     def treat_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
         is_empty = False
         city_state = self.get_city_state(city)
         if color is None:
-            color = city_state.get_color()
+            color = city_state.color
 
         for _ in itertools.repeat(None, 3 if self.cures[color] else times):
             is_empty = self.get_city_state(city).dec_infection(color)
@@ -146,7 +146,7 @@ class State:
             top_card = self.infection_deck.pop(0)
             outbreak = self._infect_city(top_card)
             if outbreak:
-                self._outbreak(top_card, self.get_city_state(top_card).get_color())
+                self._outbreak(top_card, self.get_city_state(top_card).color)
             self.infection_discard_pile.append(top_card)
             self.infections_steps += 1
         if self.infections_steps == self.infection_rate() or self.one_quiet_night:
@@ -265,7 +265,7 @@ class State:
             self.outbreaks += 1
             if self.outbreaks > 7:
                 self.game_state = GameState.LOST
-            neighbors = self.get_city_state(city).get_neighbors()
+            neighbors = self.get_city_state(city).neighbors
             for n in neighbors:
                 has_outbreak = self._infect_city(n, color, 1)
                 if has_outbreak:

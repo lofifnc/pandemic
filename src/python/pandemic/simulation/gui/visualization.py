@@ -144,7 +144,7 @@ class Visualization:
 
     @staticmethod
     def add_path_effect(line):
-        color = "black" if line.get_color() != "black" else "white"
+        color = "black" if line.color != "black" else "white"
         line.set_path_effects([patheffects.withStroke(linewidth=2, foreground=color)])
 
     def draw_virus_state(self, city: City, city_state: CityState, city_plot: Line2D):

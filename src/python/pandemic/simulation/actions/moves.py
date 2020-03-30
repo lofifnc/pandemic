@@ -19,7 +19,7 @@ def move_player(state: State, move: Movement):
     character = move.player
 
     if isinstance(move, DriveFerry):
-        assert destination_city in state.get_city_state(state.get_player_current_city(character)).get_neighbors()
+        assert destination_city in state.get_city_state(state.get_player_current_city(character)).neighbors
     if isinstance(move, DirectFlight):
         state.play_card(state.active_player, destination_city)
     if isinstance(move, CharterFlight):
@@ -60,7 +60,7 @@ def __possible_moves(state: State, character: Character, city_cards: Set[City]) 
     player_state = state.players[character]
     current_city = player_state.city
     # drives / ferries
-    moves: List[Movement] = list(map(lambda c: DriveFerry(character, c), state.cities[current_city].get_neighbors()))
+    moves: List[Movement] = list(map(lambda c: DriveFerry(character, c), state.cities[current_city].neighbors))
 
     # direct flights
     direct_flights = list(DirectFlight(character, c) for c in city_cards if c != current_city)

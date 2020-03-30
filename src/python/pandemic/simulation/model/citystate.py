@@ -14,45 +14,29 @@ class CityState:
         text_alignment: str = "left",
         research_station: bool = False,
     ):
-        self._name = name
-        self._lat = lat
-        self._lon = lon
+        self.name = name
+        self.lat = lat
+        self.lon = lon
         self._viral_state = {Virus.BLUE: 0, Virus.RED: 0, Virus.YELLOW: 0, Virus.BLACK: 0}
         self.text_alignment = text_alignment
         assert isinstance(color, Virus)
-        self._color = color
-        self._neighbors: Set[City] = set()
+        self.color = color
+        self.neighbors: Set[City] = set()
         self._research_station = research_station
-
-    def get_color(self) -> Virus:
-        return self._color
-
-    def get_display_color(self) -> str:
-        return self._color.name.lower()
-
-    def get_name(self) -> str:
-        return self._name
-
-    def get_lat(self) -> float:
-        return self._lat
-
-    def get_lon(self) -> float:
-        return self._lon
 
     def get_viral_state(self) -> Dict[Virus, int]:
         return self._viral_state
 
     def add_neighbor(self, neighbor: City):
-        self._neighbors.add(neighbor)
+        self.neighbors.add(neighbor)
 
-    """
-        Increment the infection marker in the color of location.
-        :returns True if outbreak happens
-    """
+    @property
+    def viral_state(self) -> Dict[Virus, int]:
+        return self._viral_state
 
     def inc_infection(self, color: Virus = None) -> bool:
         if color is None:
-            color = self._color
+            color = self.color
 
         if self._viral_state[color] < 3:
             self._viral_state[color] += 1
@@ -63,7 +47,7 @@ class CityState:
 
     def dec_infection(self, color: Virus = None) -> bool:
         if color is None:
-            color = self._color
+            color = self.color
 
         if self._viral_state[color] > 0:
             self._viral_state[color] -= 1
@@ -71,9 +55,6 @@ class CityState:
         else:
             # treated
             return True
-
-    def get_neighbors(self) -> Set[City]:
-        return self._neighbors
 
     def format_infection_state(self) -> str:
         state = ""
@@ -87,11 +68,12 @@ class CityState:
             state += f"ye{self._viral_state[Virus.YELLOW]} "
         return state
 
-    def get_text_offset(self):
+    @property
+    def text_offset(self):
         return 2 if self.text_alignment == "left" else -2
 
     def __str__(self):
-        return f"{self._name} {self._lat}:{self._lon}"
+        return f"{self.name} {self.lat}:{self.lon}"
 
     def has_research_station(self) -> bool:
         return self._research_station
