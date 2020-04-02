@@ -14,7 +14,7 @@ def one_game():
 
     steps = 0
     try:
-        while simulation.state.game_state == GameState.RUNNING and steps < 100:
+        while simulation.state.game_state is GameState.RUNNING and steps < 100:
             possible_actions = simulation.get_possible_actions()
             next_action = choice(tuple(possible_actions)) if possible_actions else None
             simulation.step(next_action)
@@ -35,7 +35,7 @@ def statement():
     start = time.time()
     games_run = 0
     results = list()
-    while res != GameState.WIN and games_run < 100:
+    while res != GameState.WIN and games_run < 1000:
         print(games_run)
         res, steps = one_game()
         games_run += 1

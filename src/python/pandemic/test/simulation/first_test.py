@@ -247,7 +247,7 @@ class TestGeneral:
         simulation = create_less_random_simulation(start_player=Character.RESEARCHER)
 
         # cheat and pretend virus is eradicated
-        simulation.state.players[Character.RESEARCHER]._city_cards = {
+        simulation.state.players[Character.RESEARCHER].cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
@@ -271,7 +271,7 @@ class TestGeneral:
         simulation = create_less_random_simulation()
 
         # cheat and pretend virus is eradicated
-        simulation.state.players[Character.SCIENTIST]._city_cards = {
+        simulation.state.players[Character.SCIENTIST].cards = {
             City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,

@@ -2,11 +2,12 @@ channels:
   - defaults
 dependencies:
   - pip=20.0.2
-  - python=3.7.6
+  - python=3.8.1
   - black
   - cartopy
   - numpy
   - pylint
+  - pytorch
   - pip:
     - tk
     - matplotlib

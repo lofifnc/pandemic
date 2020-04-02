@@ -19,7 +19,6 @@ class CityState:
         self.lon = lon
         self._viral_state = {Virus.BLUE: 0, Virus.RED: 0, Virus.YELLOW: 0, Virus.BLACK: 0}
         self.text_alignment = text_alignment
-        assert isinstance(color, Virus)
         self.color = color
         self.neighbors: Set[City] = set()
         self._research_station = research_station

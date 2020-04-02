@@ -1,6 +1,5 @@
 import itertools
 import logging
-from enum import Enum
 from random import shuffle, choices
 from typing import List, Set, Optional
 
@@ -13,7 +12,7 @@ from pandemic.simulation.model.enums import Character, GameState
 from pandemic.simulation.model.playerstate import PlayerState
 
 
-class Phase(Enum):
+class Phase:
     SETUP = 0
     ACTIONS = 1
     DRAW_CARDS = 2
@@ -28,7 +27,7 @@ class State:
         self.phase = Phase.SETUP
         # players
         self.players: Dict[Character, PlayerState] = {
-            c: PlayerState() for c in choices(list(Character.__members__.values()), k=player_count)
+            c: PlayerState() for c in choices(list(Character.__members__), k=player_count)
         }
 
         self.active_player: Character = list(self.players.keys())[0]
@@ -36,7 +35,7 @@ class State:
         # counters
         self.research_stations = 5
         self.outbreaks = 0
-        self._infection_rate_marker = 0
+        self.infection_rate_marker = 0
         self.cubes = {
             Virus.YELLOW: COUNT_CUBES,
             Virus.BLACK: COUNT_CUBES,
@@ -57,7 +56,7 @@ class State:
         shuffle(self.infection_deck)
         self.infection_discard_pile: List[City] = []
 
-        self.player_deck: List[Card] = list(self.cities.keys()) + list(EventCard.__members__.values())
+        self.player_deck: List[Card] = list(self.cities.keys()) + list(EventCard.__members__)
         shuffle(self.player_deck)
         self._serve_player_cards(player_count)
         self._prepare_player_deck()
@@ -167,7 +166,7 @@ class State:
         city_cards = self.player_deck
         shuffle(city_cards)
         chunks = np.array_split(city_cards, EPIDEMIC_CARDS)
-        epidemic_cards = set(EpidemicCard.__members__.values())
+        epidemic_cards = set(EpidemicCard.__members__)
         for c in chunks:
             d = list(c)
             d.append(epidemic_cards.pop())
@@ -182,7 +181,7 @@ class State:
             self.cities[end].add_neighbor(start)
 
     def infection_rate(self) -> int:
-        return INFECTIONS_RATES[self._infection_rate_marker]
+        return INFECTIONS_RATES[self.infection_rate_marker]
 
     def report(self) -> str:
         min_cubes = min(self.cubes, key=self.cubes.get)
@@ -195,16 +194,16 @@ class State:
                 "min_cubes={min_cubes}",
             ]
         ).format(
-            active_player="%s:%s" % (self.active_player.name.lower(), self.actions_left),
+            active_player="%s:%s" % (self.active_player, self.actions_left),
             player_deck_size=len(self.player_deck),
             infection_rate=self.infection_rate(),
             outbreaks=self.outbreaks,
-            min_cubes="%s:%s" % (min_cubes.name, self.cubes[min_cubes]),
+            min_cubes="%s:%s" % (min_cubes, self.cubes[min_cubes]),
         )
 
     def _epidemic_1st_part(self):
         self._phase = Phase.EPIDEMIC
-        self._infection_rate_marker += 1
+        self.infection_rate_marker += 1
         bottom_card = self.infection_deck.pop(-1)
         logging.info("Epidemic in %s!" % bottom_card)
         self._infect_city(bottom_card, times=3)
@@ -238,15 +237,15 @@ class State:
     def draw_card(self) -> Optional[Card]:
         try:
             top_card = self.player_deck.pop(0)
-            if isinstance(top_card, EpidemicCard):
+            if Card.card_type(top_card) == Card.EPIDEMIC:
                 self._epidemic_1st_part()
-                return None
+                return -1
             else:
                 return top_card
         except IndexError:
             logging.info("you lost no more cards")
             self.game_state = GameState.LOST
-            return None
+            return -1
 
     """
     Function to simulate outbreaks

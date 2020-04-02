@@ -1,77 +1,92 @@
-from enum import Enum, auto, unique
 
-
-class Card(Enum):
+class Card:
     pass
 
+    CITY = 1
+    EVENT = 2
+    EPIDEMIC = 3
 
-@unique
+    @staticmethod
+    def card_type(card: int):
+        if 0 < card <= 48:
+           return Card.CITY
+        elif card <= 54:
+           return Card.EPIDEMIC
+        elif card <= 59:
+           return Card.EVENT
+        raise ValueError
+
+
 class City(Card):
-    ALGIERS = auto()
-    ATLANTA = auto()
-    BAGHDAD = auto()
-    BANGKOK = auto()
-    BEIJING = auto()
-    BOGOTA = auto()
-    BUENOS_ARIES = auto()
-    CAIRO = auto()
-    CHENNAI = auto()
-    CHICAGO = auto()
-    DELHI = auto()
-    ESSEN = auto()
-    HO_CHI_MINH_CITY = auto()
-    HONG_KONG = auto()
-    ISTANBUL = auto()
-    JAKARTA = auto()
-    JOHANNESBURG = auto()
-    KARACHI = auto()
-    KHARTOUM = auto()
-    KINSHASA = auto()
-    KOLKATA = auto()
-    LAGOS = auto()
-    LIMA = auto()
-    LONDON = auto()
-    LOS_ANGELES = auto()
-    MADRID = auto()
-    MANILA = auto()
-    MEXICO_CITY = auto()
-    MIAMI = auto()
-    MILAN = auto()
-    MONTREAL = auto()
-    MOSCOW = auto()
-    MUMBAI = auto()
-    NEW_YORK = auto()
-    OSAKA = auto()
-    PARIS = auto()
-    RIYADH = auto()
-    SAN_FRANCISCO = auto()
-    SANTIAGO = auto()
-    SAO_PAULO = auto()
-    SEOUL = auto()
-    SHANGHAI = auto()
-    ST_PETERSBURG = auto()
-    SYDNEY = auto()
-    TAIPEI = auto()
-    TEHRAN = auto()
-    TOKYO = auto()
-    WASHINGTON = auto()
+    ALGIERS = 1
+    ATLANTA = 2
+    BAGHDAD = 3
+    BANGKOK = 4
+    BEIJING = 5
+    BOGOTA = 6
+    BUENOS_ARIES = 7
+    CAIRO = 8
+    CHENNAI = 9
+    CHICAGO = 10
+    DELHI = 11
+    ESSEN = 12
+    HO_CHI_MINH_CITY = 13
+    HONG_KONG = 14
+    ISTANBUL = 15
+    JAKARTA = 16
+    JOHANNESBURG = 17
+    KARACHI = 18
+    KHARTOUM = 19
+    KINSHASA = 20
+    KOLKATA = 21
+    LAGOS = 22
+    LIMA = 23
+    LONDON = 24
+    LOS_ANGELES = 25
+    MADRID = 26
+    MANILA = 27
+    MEXICO_CITY = 28
+    MIAMI = 29
+    MILAN = 30
+    MONTREAL = 31
+    MOSCOW = 32
+    MUMBAI = 33
+    NEW_YORK = 34
+    OSAKA = 35
+    PARIS = 36
+    RIYADH = 37
+    SAN_FRANCISCO = 38
+    SANTIAGO = 39
+    SAO_PAULO = 40
+    SEOUL = 41
+    SHANGHAI = 42
+    ST_PETERSBURG = 43
+    SYDNEY = 44
+    TAIPEI = 45
+    TEHRAN = 46
+    TOKYO = 47
+    WASHINGTON = 48
+
+    __members__ = range(1, 49)
 
 
 class EpidemicCard(Card):
-    EPIDEMIC_CARD_1 = 1
-    EPIDEMIC_CARD_2 = 2
-    EPIDEMIC_CARD_3 = 3
-    EPIDEMIC_CARD_4 = 4
-    EPIDEMIC_CARD_5 = 5
-    EPIDEMIC_CARD_6 = 6
+    EPIDEMIC_CARD_1 = 49
+    EPIDEMIC_CARD_2 = 50
+    EPIDEMIC_CARD_3 = 51
+    EPIDEMIC_CARD_4 = 52
+    EPIDEMIC_CARD_5 = 53
+    EPIDEMIC_CARD_6 = 54
+
+    __members__ = range(49, 55)
 
 
 class EventCard(Card):
-    def __init__(self, _, command):
-        self.command = command
 
-    RESILIENT_POPULATION = (auto(), "r")
-    ONE_QUIET_NIGHT = (auto(), "q")
-    AIRLIFT = (auto(), "a")
-    GOVERNMENT_GRANT = (auto(), "g")
-    FORECAST = (auto(), "f")
+    RESILIENT_POPULATION = 55
+    ONE_QUIET_NIGHT = 56
+    AIRLIFT = 57
+    GOVERNMENT_GRANT = 58
+    FORECAST = 59
+
+    __members__ = range(55, 60)

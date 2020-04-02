@@ -42,29 +42,31 @@ def get_possible_move_actions(state: State, character: Character = None) -> List
 
     player_state = state.players[character]
 
-    moves = __possible_moves(state, character, player_state.city_cards)
+    moves: List[Movement] = __possible_moves(state, character, player_state.city_cards)
 
     # Dispatcher
+    extend = moves.extend
     if character == Character.DISPATCHER:
         for c in state.players.keys():
-            moves.extend(__possible_moves(state, c, player_state.city_cards))
+            extend(__possible_moves(state, c, player_state.city_cards))
         for f, t in itertools.permutations(state.players.keys(), 2):
-            moves.append(Dispatch(f, state.get_player_current_city(t)))
-
-        state.players.keys()
-
+            __add_dispatches(moves, f, state, t)
     return moves
+
+
+def __add_dispatches(moves: List[Movement], from_char: Character, state: State, to_char: Character):
+    moves.append(Dispatch(from_char, state.get_player_current_city(to_char)))
 
 
 def __possible_moves(state: State, character: Character, city_cards: Set[City]) -> List[Movement]:
     player_state = state.players[character]
     current_city = player_state.city
     # drives / ferries
-    current_neighbors = state.cities[current_city].neighbors
-    moves: List[Movement] = [DriveFerry(character, c) for c in current_neighbors]
+    neighbor_cities = state.cities[current_city].neighbors
+    moves = [DriveFerry(character, c) for c in neighbor_cities]
 
     # direct flights
-    direct_flights = list(DirectFlight(character, c) for c in city_cards if c != current_city)
+    direct_flights = [DirectFlight(character, c) for c in city_cards if c != current_city]
 
     # charter flights
     charter_flights: List[Movement] = [

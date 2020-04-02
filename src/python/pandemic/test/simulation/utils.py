@@ -13,7 +13,7 @@ def create_less_random_simulation(start_player: Character = Character.SCIENTIST)
     player_state.clear_cards()
     state.players = {
         start_player: PlayerState(),
-        Character.RESEARCHER if start_player == Character.SCIENTIST else start_player.SCIENTIST: PlayerState(),
+        Character.RESEARCHER if start_player == Character.SCIENTIST else Character.SCIENTIST: PlayerState(),
     }
 
     state.active_player = start_player

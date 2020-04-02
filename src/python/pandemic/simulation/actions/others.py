@@ -13,6 +13,7 @@ from pandemic.simulation.model.actions import (
     ActionInterface,
     ThrowCard,
 )
+from pandemic.simulation.model.city_id import Card
 from pandemic.simulation.model.enums import Character, Virus
 from pandemic.simulation.model.playerstate import PlayerState
 from pandemic.simulation.state import State, City, Phase
@@ -75,7 +76,7 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
     cards_for_cure = 4 if character == Character.SCIENTIST else 5
     player_city_cards = player.city_cards
     if current_city_state.has_research_station() and len(player_city_cards) >= cards_for_cure:
-        player_card_viruses = [state.cities[card].color for card in player.cards if isinstance(card, City)]
+        player_card_viruses = [state.cities[card].color for card in player.cards if Card.card_type(card) == Card.CITY]
         extend = possible_actions.extend
         for virus, count in Counter(player_card_viruses).items():
             if count >= cards_for_cure and not state.cures[virus]:
@@ -85,7 +86,6 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
                         combinations(__potential_cure_cards(state, virus, player_city_cards), cards_for_cure)
                     )
                 )
-                break
 
     # Can I share knowledge?
     players_in_city: Dict[Character, PlayerState] = {c: p for c, p in state.players.items() if p.city == current_city}
@@ -97,7 +97,7 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
             possible_actions.extend(
                 ShareKnowledge(Character.RESEARCHER, card, target_player=other)
                 for other, card in itertools.product(
-                    (other for other in players_in_city.keys() if other != character.RESEARCHER), researcher.city_cards
+                    (other for other in players_in_city.keys() if other != Character.RESEARCHER), researcher.city_cards
                 )
             )
 
@@ -118,18 +118,22 @@ def __check_oldschool_knowledge_sharing(
     possible_actions: List[ActionInterface] = list()
     current_city = state.get_player_current_city(character)
     for c, ps in filter(lambda pst: current_city in pst[1].cards, players_in_city.items()):
-        if c == character:
-            # give card to other player
-            share_with_others = set(
-                ShareKnowledge(card=current_city, player=character, target_player=other)
-                for other in players_in_city.keys()
-                if other != character
-            )
-            possible_actions.extend(share_with_others)
-        else:
-            # get card from other player
-            possible_actions.append(ShareKnowledge(card=current_city, player=c, target_player=character))
+        __add_knowlegde_sharing(c, character, current_city, players_in_city, possible_actions)
     return possible_actions
+
+
+def __add_knowlegde_sharing(character, current_character, current_city, players_in_city, possible_actions):
+    if character == current_character:
+        # give card to other player
+        share_with_others = set(
+            ShareKnowledge(card=current_city, player=current_character, target_player=other)
+            for other in players_in_city.keys()
+            if other != current_character
+        )
+        possible_actions.extend(share_with_others)
+    else:
+        # get card from other player
+        possible_actions.append(ShareKnowledge(card=current_city, player=character, target_player=current_character))
 
 
 def throw_card_action(state: State, action: ThrowCard):
