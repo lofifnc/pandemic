@@ -1,16 +1,16 @@
 from pandemic.simulation.model.actions import (
     Event,
-    ThrowCard,
+    DiscardCard,
     DiscoverCure,
     ShareKnowledge,
     TreatDisease,
     OneQuietNight,
-)
+    ChooseCard)
 from pandemic.simulation.model.city_id import EventCard
 from pandemic.simulation.model.enums import Character, Virus, GameState
 from pandemic.simulation.simulation import Simulation, Phase, City
 
-from pandemic.test.simulation.utils import create_less_random_simulation, filter_out_events
+from pandemic.test.utils import create_less_random_simulation, filter_out_events, cure_virus
 
 
 class TestGeneral:
@@ -28,13 +28,12 @@ class TestGeneral:
 
         cure_action = DiscoverCure(
             target_virus=Virus.RED,
-            card_combination=frozenset(
-                {City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG}
-            ),
         )
         assert cure_action in simulation.get_possible_actions()
 
         simulation.step(cure_action)
+        assert len(simulation.get_possible_actions()) == 5
+        cure_virus(simulation, [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG], Character.RESEARCHER)
         assert simulation.state.cures[Virus.RED]
         assert not simulation.state.cures[Virus.BLUE]
         assert not simulation.state.cures[Virus.BLACK]
@@ -58,9 +57,6 @@ class TestGeneral:
         assert (
             DiscoverCure(
                 target_virus=Virus.RED,
-                card_combination=frozenset(
-                    {City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG}
-                ),
             )
             not in simulation.get_possible_actions()
         )
@@ -70,64 +66,25 @@ class TestGeneral:
         simulation = create_less_random_simulation(start_player=Character.RESEARCHER)
 
         simulation.state.active_player = Character.RESEARCHER
-        simulation.state.players[Character.RESEARCHER]._city_cards = {
-            City.BANGKOK,
+
+        cure_cards = [City.BANGKOK,
             City.HO_CHI_MINH_CITY,
             City.BEIJING,
             City.MANILA,
             City.HONG_KONG,
-            City.SYDNEY,
-        }
+            City.SYDNEY]
+        simulation.state.players[Character.RESEARCHER].cards = set(cure_cards).union({EventCard.ONE_QUIET_NIGHT})
 
+        assert (
+            DiscoverCure(target_virus=Virus.RED)
+            in simulation.get_possible_actions()
+        )
+
+        simulation.step(DiscoverCure(target_virus=Virus.RED))
         actions = simulation.get_possible_actions()
-
-        assert (
-            DiscoverCure(
-                target_virus=Virus.RED,
-                card_combination=frozenset(
-                    (City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.SYDNEY)
-                ),
-            )
-            in actions
-        )
-
-        assert (
-            DiscoverCure(
-                target_virus=Virus.RED,
-                card_combination=frozenset(
-                    (City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.HONG_KONG, City.SYDNEY)
-                ),
-            )
-            in actions
-        )
-
-        assert (
-            DiscoverCure(
-                target_virus=Virus.RED,
-                card_combination=frozenset(
-                    (City.BANGKOK, City.HO_CHI_MINH_CITY, City.MANILA, City.HONG_KONG, City.SYDNEY)
-                ),
-            )
-            in actions
-        )
-
-        assert (
-            DiscoverCure(
-                target_virus=Virus.RED,
-                card_combination=frozenset((City.BANGKOK, City.BEIJING, City.MANILA, City.HONG_KONG, City.SYDNEY)),
-            )
-            in actions
-        )
-
-        assert (
-            DiscoverCure(
-                target_virus=Virus.RED,
-                card_combination=frozenset(
-                    (City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG, City.SYDNEY)
-                ),
-            )
-            in actions
-        )
+        choices = {ChooseCard(Character.RESEARCHER, card) for card in cure_cards}
+        assert choices == set(actions)
+        assert len(actions) == len(choices)
 
     @staticmethod
     def test_player_change():
@@ -259,12 +216,12 @@ class TestGeneral:
         }
 
         assert len(simulation.get_possible_actions()) == 8, simulation.get_possible_actions()
-        assert all(map(lambda c: isinstance(c, ThrowCard), simulation.get_possible_actions()))
+        assert all(map(lambda c: isinstance(c, DiscardCard), simulation.get_possible_actions()))
 
         simulation.step(simulation.get_possible_actions().pop())
         assert simulation.state.players[Character.RESEARCHER].num_cards() == 7
         assert len(simulation.get_possible_actions()) > 0
-        assert all(map(lambda c: not isinstance(c, ThrowCard), simulation.get_possible_actions()))
+        assert all(map(lambda c: not isinstance(c, DiscardCard), simulation.get_possible_actions()))
 
     @staticmethod
     def test_two_cards_too_many():
@@ -284,17 +241,17 @@ class TestGeneral:
         }
 
         assert len(simulation.get_possible_actions()) == 9, simulation.get_possible_actions()
-        assert all(map(lambda c: isinstance(c, ThrowCard), simulation.get_possible_actions()))
+        assert all(map(lambda c: isinstance(c, DiscardCard), simulation.get_possible_actions()))
 
         simulation.step(simulation.get_possible_actions().pop())
         assert len(simulation.get_possible_actions()) == 8
-        assert all(map(lambda c: isinstance(c, ThrowCard), simulation.get_possible_actions()))
+        assert all(map(lambda c: isinstance(c, DiscardCard), simulation.get_possible_actions()))
         assert simulation.state.players[Character.SCIENTIST].num_cards() == 8
 
         simulation.step(simulation.get_possible_actions().pop())
         assert simulation.state.players[Character.SCIENTIST].num_cards() == 7
         assert len(simulation.get_possible_actions()) > 0
-        assert any(map(lambda c: not isinstance(c, ThrowCard), simulation.get_possible_actions()))
+        assert any(map(lambda c: not isinstance(c, DiscardCard), simulation.get_possible_actions()))
 
     @staticmethod
     def test_one_card_too_many_with_event():
@@ -315,12 +272,12 @@ class TestGeneral:
         )
 
         assert len(simulation.get_possible_actions()) == 9
-        assert all(map(lambda c: isinstance(c, ThrowCard) or isinstance(c, Event), simulation.get_possible_actions()))
+        assert all(map(lambda c: isinstance(c, DiscardCard) or isinstance(c, Event), simulation.get_possible_actions()))
 
         simulation.step(simulation.get_possible_actions().pop())
         assert simulation.state.players[Character.SCIENTIST].num_cards() == 7
         assert len(simulation.get_possible_actions()) > 0
-        assert any(map(lambda c: not isinstance(c, ThrowCard), simulation.get_possible_actions()))
+        assert any(map(lambda c: not isinstance(c, DiscardCard), simulation.get_possible_actions()))
 
     @staticmethod
     def test_one_card_too_many_with_event_use_event():
@@ -341,14 +298,14 @@ class TestGeneral:
         )
 
         assert len(simulation.get_possible_actions()) == 9
-        assert all(map(lambda c: isinstance(c, ThrowCard) or isinstance(c, Event), simulation.get_possible_actions()))
+        assert all(map(lambda c: isinstance(c, DiscardCard) or isinstance(c, Event), simulation.get_possible_actions()))
         event = OneQuietNight(Character.SCIENTIST)
         assert event in simulation.get_possible_actions()
 
         simulation.step(event)
         assert simulation.state.players[Character.SCIENTIST].num_cards() == 7
         assert len(simulation.get_possible_actions()) > 0
-        assert any(map(lambda c: not isinstance(c, ThrowCard), simulation.get_possible_actions()))
+        assert any(map(lambda c: not isinstance(c, DiscardCard), simulation.get_possible_actions()))
 
     @staticmethod
     def test_win_condition():
@@ -369,15 +326,12 @@ class TestGeneral:
 
         cure_action = DiscoverCure(
             target_virus=Virus.RED,
-            card_combination=frozenset(
-                {City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG}
-            ),
         )
 
         assert cure_action in simulation.get_possible_actions()
 
         simulation.step(cure_action)
-
+        cure_virus(simulation, [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG], Character.RESEARCHER)
         assert simulation.state.game_state == GameState.WIN
 
     @staticmethod

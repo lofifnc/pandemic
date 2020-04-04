@@ -1,20 +1,13 @@
 from typing import List, Optional
 
-from operator import gt
-from functools import partial
 from pandemic.simulation.actions.events import event_action, get_possible_event_actions
 from pandemic.simulation.actions.moves import move_player, get_possible_move_actions
 from pandemic.simulation.actions.others import throw_card_action, other_action, get_possible_other_actions
-from pandemic.simulation.model.actions import (
-    ActionInterface,
-    Movement,
-    Other,
-    Event,
-    ThrowCard,
-)
+from pandemic.simulation.model.actions import ActionInterface, Movement, Other, Event, DiscardCard, ChooseCard
 from pandemic.simulation.model.constants import *
 from pandemic.simulation.model.enums import Character, GameState
-from pandemic.simulation.state import State, Phase
+from pandemic.simulation.model.phases import ChooseCardsPhase, Phase
+from pandemic.simulation.state import State
 
 
 class Simulation:
@@ -22,20 +15,27 @@ class Simulation:
         self.state = State(player_count)
 
     def step(self, action: Optional[ActionInterface]):
-
-        if isinstance(action, ThrowCard):
-            throw_card_action(self.state, action)
+        _state = self.state
+        if isinstance(action, DiscardCard):
+            throw_card_action(_state, action)
+        elif isinstance(action, ChooseCard):
+            ccp: ChooseCardsPhase = _state.phase_state
+            ccp.add_chosen_card(action.card)
+            self.state.phase_state.cards_to_choose_from.remove(action.card)
+            if len(ccp.chosen_cards) == ccp.count:
+                ccp.call_after(_state)
+                _state.phase = ccp.next_phase
         elif isinstance(action, Event):
-            event_action(self.state, action)
+            event_action(_state, action)
 
-        if self.state.phase == Phase.ACTIONS and not isinstance(action, Event):
-            self.actions(self.state, action)
-        elif self.state.phase == Phase.DRAW_CARDS:
-            self.state.draw_cards(action)
-        elif self.state.phase == Phase.INFECTIONS:
-            self.state.infections(action)
-        elif self.state == Phase.EPIDEMIC:
-            self.state.epidemic_2nd_part()
+        if _state.phase == Phase.ACTIONS and not isinstance(action, Event):
+            self.actions(_state, action)
+        elif _state.phase == Phase.DRAW_CARDS:
+            _state.draw_cards(action)
+        elif _state.phase == Phase.INFECTIONS:
+            _state.infections(action)
+        elif _state == Phase.EPIDEMIC:
+            _state.epidemic_2nd_part()
 
     @staticmethod
     def actions(state: State, action: ActionInterface):
@@ -61,12 +61,16 @@ class Simulation:
         if state.phase is Phase.FORECAST or state.phase is Phase.MOVE_STATION:
             return possible_actions
 
+        if state.phase == Phase.CHOOSE_CARDS:
+            choose_phase: ChooseCardsPhase = state.phase_state
+            return [ChooseCard(choose_phase.player, card) for card in choose_phase.cards_to_choose_from]
+
         # check all players for hand limit and prompt action
         too_many_cards = False
         extend = possible_actions.extend
         for color, p_state in filter(lambda cs: cs[1].num_cards() > 7, state.players.items()):
             too_many_cards = True
-            extend(ThrowCard(color, c) for c in p_state.cards)
+            extend(DiscardCard(color, c) for c in p_state.cards)
 
         if too_many_cards:
             return possible_actions

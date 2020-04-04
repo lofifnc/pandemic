@@ -1,4 +1,3 @@
-
 class Card:
     pass
 
@@ -9,11 +8,11 @@ class Card:
     @staticmethod
     def card_type(card: int):
         if 0 < card <= 48:
-           return Card.CITY
+            return Card.CITY
         elif card <= 54:
-           return Card.EPIDEMIC
+            return Card.EPIDEMIC
         elif card <= 59:
-           return Card.EVENT
+            return Card.EVENT
         raise ValueError
 
 

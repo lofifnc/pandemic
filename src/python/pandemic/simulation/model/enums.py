@@ -12,15 +12,7 @@ class Character:
 
     __members__ = {1, 2, 3, 4, 5, 6, 7}
 
-    __colors = {
-        1: "teal",
-        2: "pink",
-        3: "orange",
-        4: "green",
-        5: "darkgreen",
-        6: "brown",
-        7: "white"
-    }
+    __colors = {1: "teal", 2: "pink", 3: "orange", 4: "green", 5: "darkgreen", 6: "brown", 7: "white"}
 
     @staticmethod
     def color(c: int) -> str:

@@ -1,6 +1,6 @@
 import itertools
 import logging
-from random import shuffle, choices
+from random import shuffle, sample
 from typing import List, Set, Optional
 
 import numpy as np
@@ -9,25 +9,17 @@ from pandemic.simulation.model.actions import ActionInterface
 from pandemic.simulation.model.city_id import EventCard, EpidemicCard, Card
 from pandemic.simulation.model.constants import *
 from pandemic.simulation.model.enums import Character, GameState
+from pandemic.simulation.model.phases import ChooseCardsPhase, Phase
 from pandemic.simulation.model.playerstate import PlayerState
-
-
-class Phase:
-    SETUP = 0
-    ACTIONS = 1
-    DRAW_CARDS = 2
-    INFECTIONS = 3
-    EPIDEMIC = 4
-    FORECAST = 5
-    MOVE_STATION = 6
 
 
 class State:
     def __init__(self, player_count: int = PLAYER_COUNT):
+        self.phase_state = None
         self.phase = Phase.SETUP
         # players
         self.players: Dict[Character, PlayerState] = {
-            c: PlayerState() for c in choices(list(Character.__members__), k=player_count)
+            c: PlayerState() for c in sample(tuple(Character.__members__), k=player_count)
         }
 
         self.active_player: Character = list(self.players.keys())[0]
@@ -49,6 +41,7 @@ class State:
         self.drawn_cards = 0
         self.infections_steps = 0
         self.last_build_research_station = City.ATLANTA
+        self.virus_to_cure = None
 
         # cards
         self.cities = create_cities_init_state()
@@ -71,8 +64,7 @@ class State:
         self.phase = Phase.ACTIONS
 
     def _init_infection_markers(self):
-        for i in range(3, 0, -1):
-            self.__draw_and_infect(i)
+        [self.__draw_and_infect(i) for i in range(3, 0, -1)]
 
     def __draw_and_infect(self, num_infections: int):
         for _ in itertools.repeat(None, 3):
@@ -109,6 +101,10 @@ class State:
     def _character_location(self, char: Character) -> Optional[City]:
         state = self.players.get(char, None)
         return state.city if state else None
+
+    def start_choose_cards_phase(self, inp: ChooseCardsPhase):
+        self.phase = Phase.CHOOSE_CARDS
+        self.phase_state = inp
 
     def _is_city_protected_by_quarantine(self, city) -> bool:
         if self.phase != Phase.SETUP and Character.QUARANTINE_SPECIALIST in self.players.keys():
@@ -166,19 +162,24 @@ class State:
         city_cards = self.player_deck
         shuffle(city_cards)
         chunks = np.array_split(city_cards, EPIDEMIC_CARDS)
-        epidemic_cards = set(EpidemicCard.__members__)
-        for c in chunks:
-            d = list(c)
-            d.append(epidemic_cards.pop())
-            shuffle(d)
-            prepared_deck.extend(d)
+        epidemic_cards = list(EpidemicCard.__members__)
+        [self.__prepare_chunk(c, epidemic_cards, prepared_deck) for c in chunks]
         self.player_deck = prepared_deck
 
+    @staticmethod
+    def __prepare_chunk(c, epidemic_cards, prepared_deck):
+        d = list(c)
+        d.append(epidemic_cards.pop())
+        shuffle(d)
+        prepared_deck.extend(d)
+
     def _add_neighbors_to_city_state(self):
-        for con in CONNECTIONS:
-            start, end = con[0], con[1]
-            self.cities[start].add_neighbor(end)
-            self.cities[end].add_neighbor(start)
+        [self.__resolve_connection(con) for con in CONNECTIONS]
+
+    def __resolve_connection(self, con):
+        start, end = con[0], con[1]
+        self.cities[start].add_neighbor(end)
+        self.cities[end].add_neighbor(start)
 
     def infection_rate(self) -> int:
         return INFECTIONS_RATES[self.infection_rate_marker]
@@ -266,8 +267,7 @@ class State:
                     self._outbreak(n, color, outbreaks)
 
     def _serve_player_cards(self, player_count: int):
-        for player in self.players.values():
-            player.add_cards(self.draw_player_cards(count=TOTAL_STARTING_PLAYER_CARDS - player_count))
+        [player.add_cards(self.draw_player_cards(count=TOTAL_STARTING_PLAYER_CARDS - player_count)) for player in self.players.values()]
 
     def get_player_current_city(self, player: Character) -> City:
         return self.players[player].city

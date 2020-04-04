@@ -2,10 +2,10 @@ import itertools
 from typing import List
 
 from pandemic.simulation.actions import others
+from pandemic.simulation.actions.others import num_cards_for_cure
 from pandemic.simulation.model.actions import (
     Event,
     Forecast,
-    ForecastOrder,
     GovernmentGrant,
     Airlift,
     ResilientPopulation,
@@ -14,7 +14,8 @@ from pandemic.simulation.model.actions import (
 )
 from pandemic.simulation.model.city_id import EventCard
 from pandemic.simulation.model.enums import Character
-from pandemic.simulation.state import State, Phase
+from pandemic.simulation.model.phases import ChooseCardsPhase, Phase
+from pandemic.simulation.state import State
 
 
 def event_action(state: State, event: Event):
@@ -22,9 +23,6 @@ def event_action(state: State, event: Event):
         state.previous_phase = state.phase
         state.phase = Phase.FORECAST
         state.play_card(event.player, EventCard.FORECAST)
-    elif isinstance(event, ForecastOrder):
-        state.infection_deck[:6] = event.forecast
-        state.phase = state.previous_phase
     elif isinstance(event, GovernmentGrant):
         others.build_research_station(state, event.target_city)
         state.play_card(event.player, EventCard.GOVERNMENT_GRANT)
@@ -45,13 +43,17 @@ def event_action(state: State, event: Event):
 def get_possible_event_actions(state: State) -> List[Event]:
 
     if state.phase == Phase.FORECAST:
-        return __get_forecast_order(state)
-    if state.phase == Phase.MOVE_STATION:
+        __init_forecast(state)
+        return []
+    elif state.phase == Phase.MOVE_STATION:
         return [
             MoveResearchStation(state.active_player, move_from=c)
             for c, s in state.cities.items()
             if s.has_research_station() and not c == state.last_build_research_station
         ]
+    elif state.phase == Phase.CURE_VIRUS:
+        __init_cure_virus(state)
+        return []
 
     possible_actions: List[Event] = list()
     extend = possible_actions.extend
@@ -64,50 +66,82 @@ def get_possible_event_actions(state: State) -> List[Event]:
 
 def __action_for_event_card(state: State, character: Character, event_card: EventCard) -> List[Event]:
 
-    possible_actions: List[Event] = list()
     if event_card == EventCard.RESILIENT_POPULATION:
-        __add_resilient_population(state, character, possible_actions)
+        return __resilient_population(state, character)
 
     if event_card == EventCard.AIRLIFT:
-        __add_airlift(state, character, possible_actions)
+        return __airlift(state, character)
 
     if event_card == EventCard.FORECAST:
-        possible_actions.append(Forecast(player=character))
+        return [Forecast(player=character)]
 
     if event_card == EventCard.GOVERNMENT_GRANT:
-        __add_government_grant(state, character, possible_actions)
+        return __government_grant(state, character)
 
     if event_card == EventCard.ONE_QUIET_NIGHT:
-        possible_actions.append(OneQuietNight(player=character))
-
-    return possible_actions
+        return [OneQuietNight(player=character)]
 
 
-def __get_forecast_order(state: State) -> List[Event]:
+def __forecast_after(s, _, c):
+    s.infection_deck[:6] = c
+
+
+def __init_forecast(state: State):
     active_player = state.active_player
-    return [
-        ForecastOrder(active_player, forecast=tuple(permutation))
-        for permutation in itertools.permutations(state.infection_deck[:6])
-    ]
 
-
-def __add_resilient_population(state: State, character: Character, possible_actions: List[Event]):
-    possible_actions.extend(
-        ResilientPopulation(player=character, discard_city=card) for card in state.infection_discard_pile
+    ccp = ChooseCardsPhase(
+        next_phase=state.previous_phase,
+        cards_to_choose_from=set(state.infection_deck[:6]),
+        count=6,
+        player=active_player,
+        after=__forecast_after,
     )
 
+    state.start_choose_cards_phase(ccp)
 
-def __add_airlift(state: State, character: Character, possible_actions: List[Event]):
-    possible_actions.extend(
+
+def __cure_virus_after(state, p, cards):
+    state.cures[state.virus_to_cure] = True
+    for card in cards:
+        state.play_card(p, card)
+    medic = state.players.get(Character.MEDIC, None)
+    if medic:
+        state.treat_city(medic.city, state.virus_to_cure, 3)
+    state.virus_to_cure = None
+
+
+def __init_cure_virus(state: State):
+    active_player = state.active_player
+    cure_cards = {
+        city for city in state.players[active_player].city_cards if state.cities[city].color == state.virus_to_cure
+    }
+    ccp = ChooseCardsPhase(
+        next_phase=state.previous_phase,
+        cards_to_choose_from=cure_cards,
+        count=num_cards_for_cure(state.active_player),
+        player=active_player,
+        after=__cure_virus_after,
+    )
+
+    state.start_choose_cards_phase(ccp)
+
+
+def __resilient_population(state: State, character: Character) -> List[Event]:
+    # TODO: split in two phases
+    return [ResilientPopulation(player=character, discard_city=card) for card in state.infection_discard_pile]
+
+
+def __airlift(state: State, character: Character) -> List[Event]:
+    return [
         Airlift(player=character, target_player=p, destination=city)
         for city, (p, c) in itertools.product(state.cities.keys(), state.players.items())
         if c.city != city
-    )
+    ]
 
 
-def __add_government_grant(state: State, character: Character, possible_actions: List[Event]):
-    possible_actions.extend(
+def __government_grant(state: State, character: Character) -> List[Event]:
+    return [
         GovernmentGrant(player=character, target_city=city)
         for city, s in state.cities.items()
         if not s.has_research_station()
-    )
+    ]

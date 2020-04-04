@@ -99,20 +99,12 @@ class Visualization:
             end = state.cities[conn[1]]
 
             self._ax.plot(
-                [start.lon, end.lon],
-                [start.lat, end.lat],
-                color="gray",
-                linestyle="--",
-                transform=ccrs.Geodetic(),
+                [start.lon, end.lon], [start.lat, end.lat], color="gray", linestyle="--", transform=ccrs.Geodetic()
             )
 
         for city_id, location in state.cities.items():
             city: Line2D = self._ax.plot(
-                location.lon,
-                location.lat,
-                "o",
-                color=location.color,
-                transform=ccrs.Geodetic(),
+                location.lon, location.lat, "o", color=location.color, transform=ccrs.Geodetic()
             )[0]
 
             # Visualization.add_path_effect(city)
@@ -134,12 +126,7 @@ class Visualization:
         for character, player in state.players.items():
             location = state.cities[player.city]
             self._player[character] = self._ax.plot(
-                location.lon,
-                location.lat,
-                "d",
-                markersize=9,
-                color=character.color,
-                transform=ccrs.Geodetic(),
+                location.lon, location.lat, "d", markersize=9, color=character.color, transform=ccrs.Geodetic()
             )[0]
 
     @staticmethod

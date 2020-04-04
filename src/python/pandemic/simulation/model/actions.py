@@ -57,17 +57,6 @@ class OperationsFlight(Movement):
         return f"{super().to_command()} {self.discard_card}"
 
 
-@dataclass(frozen=True)
-class OperationsExpertCharterFlight(Movement):
-    discard_card: City
-
-    def to_command(self):
-        return (
-            f"{self.PREFIX} {self.type.command} {self.destination}"
-            f" {self.player} {self.discard_card}"
-        )
-
-
 #################
 # Other Actions #
 #################
@@ -98,11 +87,10 @@ class TreatDisease(Other):
 
 @dataclass(frozen=True)
 class DiscoverCure(Other):
-    card_combination: FrozenSet[City]
     target_virus: Virus
 
     def to_command(self):
-        return f"{self.PREFIX} d {self.target_virus} {iterable_to_string(self.card_combination)}"
+        return f"{self.PREFIX} d {self.target_virus}"
 
 
 @dataclass(frozen=True)
@@ -149,14 +137,6 @@ class Forecast(Event):
 
 
 @dataclass(frozen=True)
-class ForecastOrder(Event):
-    forecast: Tuple[City]
-
-    def to_command(self):
-        return f"{self.PREFIX} f ${self.player} ${iterable_to_string(self.forecast)}"
-
-
-@dataclass(frozen=True)
 class GovernmentGrant(Event):
     target_city: City
 
@@ -170,10 +150,7 @@ class Airlift(Event):
     destination: City
 
     def to_command(self):
-        return (
-            f"{self.PREFIX} g ${self.player} ${self.target_player} "
-            f"${self.destination}"
-        )
+        return f"{self.PREFIX} g ${self.player} ${self.target_player} " f"${self.destination}"
 
 
 @dataclass(frozen=True)
@@ -191,7 +168,18 @@ class OneQuietNight(Event):
 
 
 @dataclass(frozen=True)
-class ThrowCard(ActionInterface):
+class DiscardCard(ActionInterface):
+    PREFIX = "t"
+
+    player: Character
+    card: Card
+
+    def to_command(self):
+        return f"{self.PREFIX} {self.player} {self.card}"
+
+
+@dataclass(frozen=True)
+class ChooseCard(ActionInterface):
     PREFIX = "t"
 
     player: Character

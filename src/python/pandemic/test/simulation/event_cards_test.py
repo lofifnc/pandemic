@@ -7,14 +7,14 @@ from pandemic.simulation.model.actions import (
     Airlift,
     Forecast,
     GovernmentGrant,
-    ForecastOrder,
+    ChooseCard,
 )
 from pandemic.simulation.model.city_id import EventCard, City
 from pandemic.simulation.model.enums import Character
 from pandemic.simulation.state import State, Phase
 
 from pandemic.simulation.simulation import Simulation
-from pandemic.test.simulation.utils import create_less_random_simulation
+from pandemic.test.utils import create_less_random_simulation
 
 
 class TestEventCards:
@@ -82,10 +82,12 @@ class TestEventCards:
         assert event in actions
         simulation.step(event)
         assert EventCard.FORECAST not in simulation.state.players[active_player].cards
-        order = ForecastOrder(active_player, tuple(our_shuffle))
-        assert order in simulation.get_possible_actions()
-        assert len(list(simulation.get_possible_actions())) == math.factorial(6)
-        simulation.step(order)
+        for idx, card in enumerate(our_shuffle):
+            order = ChooseCard(active_player, card)
+            assert order in simulation.get_possible_actions()
+            assert len(list(simulation.get_possible_actions())) == 6 - idx
+            simulation.step(order)
+
         assert our_shuffle == simulation.state.infection_deck[:6]
 
     @staticmethod

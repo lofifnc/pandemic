@@ -1,3 +1,5 @@
+from typing import List
+
 from pandemic.simulation.model.actions import (
     ShareKnowledge,
     BuildResearchStation,
@@ -9,12 +11,12 @@ from pandemic.simulation.model.actions import (
     TreatDisease,
     DiscoverCure,
     MoveResearchStation,
-)
+    ChooseCard)
 from pandemic.simulation.model.city_id import City, EventCard
 from pandemic.simulation.model.enums import Character, Virus
-from pandemic.simulation.simulation import Phase
+from pandemic.simulation.simulation import Phase, Simulation
 
-from pandemic.test.simulation.utils import create_less_random_simulation
+from pandemic.test.utils import create_less_random_simulation, cure_virus
 
 
 class TestCharacters:
@@ -84,12 +86,10 @@ class TestCharacters:
 
         cure_action = DiscoverCure(
             target_virus=Virus.RED,
-            card_combination=frozenset(
-                {City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG}
-            ),
         )
         assert cure_action in simulation.get_possible_actions()
         simulation.step(cure_action)
+        cure_virus(simulation, [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG], Character.MEDIC)
         assert simulation.state.cities[City.BANGKOK].get_viral_state()[Virus.RED] == 0
 
         simulation.state.cubes[Virus.RED] = 12
@@ -191,11 +191,10 @@ class TestCharacters:
 
         cure_action = DiscoverCure(
             target_virus=Virus.RED,
-            card_combination=frozenset({City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA}),
         )
         assert cure_action in simulation.get_possible_actions()
-
         simulation.step(cure_action)
+        cure_virus(simulation, [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA], Character.SCIENTIST)
         assert simulation.state.cures[Virus.RED]
         assert not simulation.state.cures[Virus.BLUE]
         assert not simulation.state.cures[Virus.BLACK]

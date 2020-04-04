@@ -11,12 +11,13 @@ from pandemic.simulation.model.actions import (
     ShareKnowledge,
     ReserveCard,
     ActionInterface,
-    ThrowCard,
+    DiscardCard,
 )
 from pandemic.simulation.model.city_id import Card
 from pandemic.simulation.model.enums import Character, Virus
+from pandemic.simulation.model.phases import Phase
 from pandemic.simulation.model.playerstate import PlayerState
-from pandemic.simulation.state import State, City, Phase
+from pandemic.simulation.state import State, City
 
 
 def other_action(state: State, action: Other, character: Character = None):
@@ -30,12 +31,9 @@ def other_action(state: State, action: Other, character: Character = None):
             state.play_card(character, action.city)
         build_research_station(state, action.city)
     elif isinstance(action, DiscoverCure):
-        for card in action.card_combination:
-            state.play_card(character, card)
-        state.cures[action.target_virus] = True
-        medic = state.players.get(Character.MEDIC, None)
-        if medic:
-            state.treat_city(medic.city, action.target_virus, 3)
+        state.previous_phase = state.phase
+        state.virus_to_cure = action.target_virus
+        state.phase = Phase.CURE_VIRUS
     elif isinstance(action, ShareKnowledge):
         state.play_card(action.player, action.card)
         state.players[action.target_player].add_card(action.card)
@@ -73,19 +71,15 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
         possible_actions.append(BuildResearchStation(current_city))
 
     # Can I discover a cure at this situation?
-    cards_for_cure = 4 if character == Character.SCIENTIST else 5
+    cards_for_cure = num_cards_for_cure(character)
     player_city_cards = player.city_cards
     if current_city_state.has_research_station() and len(player_city_cards) >= cards_for_cure:
-        player_card_viruses = [state.cities[card].color for card in player.cards if Card.card_type(card) == Card.CITY]
-        extend = possible_actions.extend
+        player_card_viruses = [state.cities[card].color for card in player.city_cards]
+        append = possible_actions.append
         for virus, count in Counter(player_card_viruses).items():
             if count >= cards_for_cure and not state.cures[virus]:
-                extend(
-                    DiscoverCure(target_virus=virus, card_combination=frozenset(cure_cards))
-                    for cure_cards in list(
-                        combinations(__potential_cure_cards(state, virus, player_city_cards), cards_for_cure)
-                    )
-                )
+                append(DiscoverCure(target_virus=virus))
+                break
 
     # Can I share knowledge?
     players_in_city: Dict[Character, PlayerState] = {c: p for c, p in state.players.items() if p.city == current_city}
@@ -106,6 +100,10 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
         possible_actions.extend(ReserveCard(card) for card in state.player_discard_pile)
 
     return possible_actions
+
+
+def num_cards_for_cure(character):
+    return 4 if character == Character.SCIENTIST else 5
 
 
 def __potential_cure_cards(state: State, virus: Virus, city_cards=List[City]) -> List[City]:
@@ -136,8 +134,8 @@ def __add_knowlegde_sharing(character, current_character, current_city, players_
         possible_actions.append(ShareKnowledge(card=current_city, player=character, target_player=current_character))
 
 
-def throw_card_action(state: State, action: ThrowCard):
-    assert isinstance(action, ThrowCard)
+def throw_card_action(state: State, action: DiscardCard):
+    assert isinstance(action, DiscardCard)
     state.play_card(action.player, action.card)
 
 
