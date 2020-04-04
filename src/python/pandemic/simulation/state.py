@@ -63,6 +63,9 @@ class State:
         self.previous_phase = self.phase
         self.phase = Phase.ACTIONS
 
+    def reset(self):
+        self.__init__(len(self.players))
+
     def _init_infection_markers(self):
         [self.__draw_and_infect(i) for i in range(3, 0, -1)]
 

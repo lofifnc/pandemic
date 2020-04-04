@@ -84,3 +84,6 @@ class Simulation:
         if state.phase is Phase.INFECTIONS:
             return possible_actions
         return possible_actions
+
+    def reset(self):
+        self.state.reset()

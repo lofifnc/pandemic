@@ -9,8 +9,7 @@ from pandemic.simulation.simulation import Simulation
 from random import choice
 
 
-def one_game():
-    simulation = Simulation()
+def one_game(simulation):
 
     steps = 0
     try:
@@ -27,6 +26,7 @@ def one_game():
     result = simulation.state.game_state
     # print("game result:", state.get_game_condition())
     # print("steps to result:", steps)
+    simulation.reset()
     return (result, steps)
 
 
@@ -35,9 +35,10 @@ def statement():
     start = time.time()
     games_run = 0
     results = list()
+    simulation = Simulation()
     while res != GameState.WIN and games_run < 1000:
         print(games_run)
-        res, steps = one_game()
+        res, steps = one_game(simulation)
         games_run += 1
         results.append(steps)
 
