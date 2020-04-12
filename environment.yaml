@@ -8,6 +8,7 @@ dependencies:
   - numpy
   - pylint
   - pytorch
+  - scipy
   - pip:
     - tk
     - matplotlib

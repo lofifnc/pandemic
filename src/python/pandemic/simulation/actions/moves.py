@@ -36,6 +36,7 @@ def move_player(state: State, move: Movement):
     state.move_player_to_city(character, destination_city)
 
 
+# @profile
 def get_possible_move_actions(state: State, character: Character = None) -> List[Movement]:
     if character is None:
         character = state.active_player
@@ -58,6 +59,7 @@ def __add_dispatches(moves: List[Movement], from_char: Character, state: State, 
     moves.append(Dispatch(from_char, state.get_player_current_city(to_char)))
 
 
+# @profile
 def __possible_moves(state: State, character: Character, city_cards: Set[City]) -> List[Movement]:
     player_state = state.players[character]
     current_city = player_state.city

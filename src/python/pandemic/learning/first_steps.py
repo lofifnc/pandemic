@@ -5,29 +5,35 @@ import cProfile
 import io
 
 from pandemic.simulation.model.enums import GameState
-from pandemic.simulation.simulation import Simulation
-from random import choice
+from pandemic.learning.environment import PandemicEnvironment
+import numpy as np
 
 
-def one_game(simulation):
+def random_action(actions):
+    idx_nonzero = np.nonzero(actions)[0]
+    return np.random.choice(idx_nonzero)
+
+
+def one_game(env, tactic, max_steps):
 
     steps = 0
-    try:
-        while simulation.state.game_state is GameState.RUNNING and steps < 100:
-            possible_actions = simulation.get_possible_actions()
-            next_action = choice(tuple(possible_actions)) if possible_actions else None
-            simulation.step(next_action)
-            if any(simulation.state.cures.values()):
-                break
-            steps += 1
-    except IndexError:
-        pass
+    next_action = tactic(env.action_space)
+    _, reward, done, _ = env.step(next_action)
 
-    result = simulation.state.game_state
+    while not done and (max_steps is None or steps < max_steps):
+        next_action = tactic(env.action_space)
+        _, reward, done, _ = env.step(next_action)
+        if any(env._simulation.state.cures.values()):
+            print("found cure !!!")
+            break
+        steps += 1
+
+
+    result = reward
     # print("game result:", state.get_game_condition())
     # print("steps to result:", steps)
-    simulation.reset()
-    return (result, steps)
+    env.reset()
+    return result, steps
 
 
 def statement():
@@ -35,14 +41,15 @@ def statement():
     start = time.time()
     games_run = 0
     results = list()
-    simulation = Simulation()
-    while res != GameState.WIN and games_run < 1000:
-        print(games_run)
-        res, steps = one_game(simulation)
+    env = PandemicEnvironment()
+    while res != GameState.WIN and games_run < 100:
+        print("game no:", games_run)
+        res, steps = one_game(env, random_action, None)
         games_run += 1
         results.append(steps)
 
     print("min", min(results))
+    print("max", max(results))
     print("took seconds", time.time() - start)
     print("games_run:", games_run)
 

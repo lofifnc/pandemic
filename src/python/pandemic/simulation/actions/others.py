@@ -1,5 +1,4 @@
 import itertools
-from itertools import combinations
 from collections import Counter
 from typing import List, Dict, Set
 
@@ -13,7 +12,6 @@ from pandemic.simulation.model.actions import (
     ActionInterface,
     DiscardCard,
 )
-from pandemic.simulation.model.city_id import Card
 from pandemic.simulation.model.enums import Character, Virus
 from pandemic.simulation.model.phases import Phase
 from pandemic.simulation.model.playerstate import PlayerState
@@ -123,7 +121,7 @@ def __check_oldschool_knowledge_sharing(
 def __add_knowlegde_sharing(character, current_character, current_city, players_in_city, possible_actions):
     if character == current_character:
         # give card to other player
-        share_with_others = set(
+        share_with_others = list(
             ShareKnowledge(card=current_city, player=current_character, target_player=other)
             for other in players_in_city.keys()
             if other != current_character

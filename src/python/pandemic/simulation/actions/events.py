@@ -73,7 +73,7 @@ def __action_for_event_card(state: State, character: Character, event_card: Even
         return __airlift(state, character)
 
     if event_card == EventCard.FORECAST:
-        return [Forecast(player=character)]
+        return [Forecast(player=character)] if len(state.infection_deck) > 0 else []
 
     if event_card == EventCard.GOVERNMENT_GRANT:
         return __government_grant(state, character)
@@ -89,10 +89,11 @@ def __forecast_after(s, _, c):
 def __init_forecast(state: State):
     active_player = state.active_player
 
+    top_cards = set(state.infection_deck[:6])
     ccp = ChooseCardsPhase(
         next_phase=state.previous_phase,
-        cards_to_choose_from=set(state.infection_deck[:6]),
-        count=6,
+        cards_to_choose_from=top_cards,
+        count=len(top_cards),
         player=active_player,
         after=__forecast_after,
     )

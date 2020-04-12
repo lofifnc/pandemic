@@ -58,6 +58,9 @@ def create_cities_init_state() -> Dict[City, CityState]:
     }
 
 
+city_colors = {id: city.color for id, city in create_cities_init_state().items()}
+
+
 CONNECTIONS: (City, City) = [
     (City.SAN_FRANCISCO, City.TOKYO),
     (City.SAN_FRANCISCO, City.MANILA),

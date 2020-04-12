@@ -1,5 +1,7 @@
+from collections import defaultdict
 from typing import List, Set, Optional
 
+from pandemic.simulation.model import constants
 from pandemic.simulation.model.city_id import Card, EventCard
 from pandemic.simulation.model.constants import *
 
@@ -14,10 +16,15 @@ class PlayerState:
         self._contingency_planner_city_card: Optional[Card] = None
         self._operations_expert_special_shuttle = True
         self._num_cards = 0
+        self._city_colors = defaultdict(int)
 
     @property
     def cards(self) -> Set[Card]:
         return self.city_cards | self.event_cards
+
+    @property
+    def city_colors(self) -> Dict[Virus, int]:
+        return self._city_colors
 
     @cards.setter
     def cards(self, value: Set[Card]):
@@ -45,6 +52,7 @@ class PlayerState:
     @contingency_planner_card.setter
     def contingency_planner_card(self, value: Card):
         if Card.card_type(value) == Card.CITY:
+            self._city_colors[constants.city_colors[value]] += 1
             self._contingency_planner_city_card = value
             self._contingency_planner_event_card = None
         else:
@@ -56,14 +64,17 @@ class PlayerState:
             self._event_cards.add(card)
             self._num_cards += 1
         elif Card.card_type(card) == Card.CITY:
+            self._city_colors[constants.city_colors[card]] += 1
             self._city_cards.add(card)
             self._num_cards += 1
+
 
     def add_cards(self, cards: List[Card]):
         [self.add_card(card) for card in cards]
 
     def clear_cards(self):
         self._num_cards = 0
+        self._city_colors = defaultdict(int)
         self._contingency_planner_event_card: Optional[Card] = None
         self._contingency_planner_city_card: Optional[Card] = None
         self._event_cards.clear()
@@ -74,10 +85,12 @@ class PlayerState:
             try:
                 self._city_cards.remove(card)
                 self._num_cards -= 1
+                self._city_colors[constants.city_colors[card]] -= 1
                 return True
             except KeyError:
                 if card == self._contingency_planner_city_card:
                     self._contingency_planner_city_card = None
+                    self._city_colors[constants.city_colors[card]] -= 1
                     return False
         else:
             try:

@@ -26,9 +26,7 @@ def filter_out_events(actions: List[ActionInterface], clazz: Type) -> Set[Action
     return set(filter(lambda a: not isinstance(a, clazz), actions))
 
 
-def cure_virus(simulation: Simulation,
-               cure_card_combination: List[City],
-               player: Character):
+def cure_virus(simulation: Simulation, cure_card_combination: List[City], player: Character):
     choices = {ChooseCard(player, card) for card in cure_card_combination}
     assert choices == set(simulation.get_possible_actions())
     for card in cure_card_combination:

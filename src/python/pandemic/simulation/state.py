@@ -15,6 +15,11 @@ from pandemic.simulation.model.playerstate import PlayerState
 
 class State:
     def __init__(self, player_count: int = PLAYER_COUNT):
+        self.init(player_count)
+
+    # noinspection PyAttributeOutsideInit
+    # @profile
+    def init(self, player_count: int):
         self.phase_state = None
         self.phase = Phase.SETUP
         # players
@@ -64,7 +69,7 @@ class State:
         self.phase = Phase.ACTIONS
 
     def reset(self):
-        self.__init__(len(self.players))
+        self.init(len(self.players))
 
     def _init_infection_markers(self):
         [self.__draw_and_infect(i) for i in range(3, 0, -1)]
@@ -72,20 +77,29 @@ class State:
     def __draw_and_infect(self, num_infections: int):
         for _ in itertools.repeat(None, 3):
             top_card = self.infection_deck.pop(1)
-            self._infect_city(top_card, times=num_infections)
+            self.infect_city(top_card, times=num_infections)
             self.infection_discard_pile.append(top_card)
+
+    def infect_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
+        outbreak = self._infect_city(city, color, times)
+        if outbreak:
+            self._outbreak(city, self.cities[city].color)
+        return outbreak
 
     def _infect_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
 
         outbreak_occurred = False
         city_state = self.cities[city]
+
         if color is None:
             color = city_state.color
 
+        print(city_state.name, city_state.viral_state[color])
+
         if (
             self._is_city_protected_by_quarantine(city)
-            or self.cures[color]
-            and (self.cubes[color] == COUNT_CUBES or self._character_location(Character.MEDIC) == city)
+            or (self.cures[color]
+            and (self.cubes[color] == COUNT_CUBES or self._character_location(Character.MEDIC) == city))
         ):
             # virus has been eradicated or city is protected by medic or quarantine expert
             return outbreak_occurred
@@ -141,10 +155,14 @@ class State:
         if self.infections_steps == 0 and self.one_quiet_night:
             pass
         elif self.infections_steps < self.infection_rate():
-            top_card = self.infection_deck.pop(0)
-            outbreak = self._infect_city(top_card)
-            if outbreak:
-                self._outbreak(top_card, self.cities[top_card].color)
+            try:
+                top_card = self.infection_deck.pop(0)
+            except IndexError:
+                # TODO: inspect here!
+                self.game_state = GameState.LOST
+                return
+            self.infect_city(top_card)
+
             self.infection_discard_pile.append(top_card)
             self.infections_steps += 1
         if self.infections_steps == self.infection_rate() or self.one_quiet_night:
@@ -206,11 +224,12 @@ class State:
         )
 
     def _epidemic_1st_part(self):
-        self._phase = Phase.EPIDEMIC
+        self.phase = Phase.EPIDEMIC
         self.infection_rate_marker += 1
         bottom_card = self.infection_deck.pop(-1)
+        print("epidemic!!!")
         logging.info("Epidemic in %s!" % bottom_card)
-        self._infect_city(bottom_card, times=3)
+        self.infect_city(bottom_card, times=3)
         self.infection_discard_pile.append(bottom_card)
 
     def epidemic_2nd_part(self):
@@ -222,21 +241,8 @@ class State:
     def draw_player_cards(self, count) -> List[Card]:
         drawn_cards: List[Card] = []
         for _ in itertools.repeat(None, count):
-            drawn_cards.extend(self._draw_card())
+            drawn_cards.append(self.draw_card())
         return drawn_cards
-
-    def _draw_card(self) -> List[Card]:
-        try:
-            top_card = self.player_deck.pop(0)
-            if isinstance(top_card, EpidemicCard):
-                self._epidemic_1st_part()
-                return []
-            else:
-                return [top_card]
-        except IndexError:
-            logging.info("you lost no more cards")
-            self.game_state = GameState.LOST
-            return []
 
     def draw_card(self) -> Optional[Card]:
         try:
@@ -256,6 +262,7 @@ class State:
     """
 
     def _outbreak(self, city: City, color: Virus, outbreaks: Set[City] = None):
+        print("outbreak")
         if outbreaks is None:
             outbreaks = set()
         if city not in outbreaks:
@@ -270,7 +277,10 @@ class State:
                     self._outbreak(n, color, outbreaks)
 
     def _serve_player_cards(self, player_count: int):
-        [player.add_cards(self.draw_player_cards(count=TOTAL_STARTING_PLAYER_CARDS - player_count)) for player in self.players.values()]
+        [
+            player.add_cards(self.draw_player_cards(count=TOTAL_STARTING_PLAYER_CARDS - player_count))
+            for player in self.players.values()
+        ]
 
     def get_player_current_city(self, player: Character) -> City:
         return self.players[player].city

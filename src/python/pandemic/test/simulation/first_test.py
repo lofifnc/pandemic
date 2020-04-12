@@ -5,7 +5,8 @@ from pandemic.simulation.model.actions import (
     ShareKnowledge,
     TreatDisease,
     OneQuietNight,
-    ChooseCard)
+    ChooseCard,
+)
 from pandemic.simulation.model.city_id import EventCard
 from pandemic.simulation.model.enums import Character, Virus, GameState
 from pandemic.simulation.simulation import Simulation, Phase, City
@@ -26,14 +27,16 @@ class TestGeneral:
             City.HONG_KONG,
         }
 
-        cure_action = DiscoverCure(
-            target_virus=Virus.RED,
-        )
+        cure_action = DiscoverCure(target_virus=Virus.RED)
         assert cure_action in simulation.get_possible_actions()
 
         simulation.step(cure_action)
         assert len(simulation.get_possible_actions()) == 5
-        cure_virus(simulation, [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG], Character.RESEARCHER)
+        cure_virus(
+            simulation,
+            [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG],
+            Character.RESEARCHER,
+        )
         assert simulation.state.cures[Virus.RED]
         assert not simulation.state.cures[Virus.BLUE]
         assert not simulation.state.cures[Virus.BLACK]
@@ -54,12 +57,7 @@ class TestGeneral:
         }
         simulation.state.cures[Virus.RED] = True
 
-        assert (
-            DiscoverCure(
-                target_virus=Virus.RED,
-            )
-            not in simulation.get_possible_actions()
-        )
+        assert DiscoverCure(target_virus=Virus.RED) not in simulation.get_possible_actions()
 
     @staticmethod
     def test_multiple_cure_combinations():
@@ -67,18 +65,10 @@ class TestGeneral:
 
         simulation.state.active_player = Character.RESEARCHER
 
-        cure_cards = [City.BANGKOK,
-            City.HO_CHI_MINH_CITY,
-            City.BEIJING,
-            City.MANILA,
-            City.HONG_KONG,
-            City.SYDNEY]
+        cure_cards = [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG, City.SYDNEY]
         simulation.state.players[Character.RESEARCHER].cards = set(cure_cards).union({EventCard.ONE_QUIET_NIGHT})
 
-        assert (
-            DiscoverCure(target_virus=Virus.RED)
-            in simulation.get_possible_actions()
-        )
+        assert DiscoverCure(target_virus=Virus.RED) in simulation.get_possible_actions()
 
         simulation.step(DiscoverCure(target_virus=Virus.RED))
         actions = simulation.get_possible_actions()
@@ -177,7 +167,7 @@ class TestGeneral:
         simulation = create_less_random_simulation()
 
         # in
-        simulation.state._infect_city(City.ATLANTA, times=3)
+        simulation.state.infect_city(City.ATLANTA, times=3)
         simulation.state.cures[Virus.BLUE] = True
 
         assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] == 3
@@ -196,8 +186,18 @@ class TestGeneral:
         simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] = 0
 
         assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] == 0
-        simulation.state._infect_city(City.ATLANTA, times=2)
+        simulation.state.infect_city(City.ATLANTA, times=2)
         assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] == 0
+
+    @staticmethod
+    def test_outbreak():
+        simulation = create_less_random_simulation(start_player=Character.RESEARCHER)
+        simulation.state.cities[City.ATLANTA].viral_state[Virus.BLUE] = 3
+        before = simulation.state.outbreaks
+        assert before == 0
+        assert simulation.state.infect_city(City.ATLANTA, times=1)
+        assert simulation.state.cities[City.ATLANTA].viral_state[Virus.BLUE] == 3
+        assert simulation.state.outbreaks > before
 
     @staticmethod
     def test_one_card_too_many():
@@ -324,14 +324,16 @@ class TestGeneral:
             City.HONG_KONG,
         }
 
-        cure_action = DiscoverCure(
-            target_virus=Virus.RED,
-        )
+        cure_action = DiscoverCure(target_virus=Virus.RED)
 
         assert cure_action in simulation.get_possible_actions()
 
         simulation.step(cure_action)
-        cure_virus(simulation, [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG], Character.RESEARCHER)
+        cure_virus(
+            simulation,
+            [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG],
+            Character.RESEARCHER,
+        )
         assert simulation.state.game_state == GameState.WIN
 
     @staticmethod
@@ -354,7 +356,7 @@ class TestGeneral:
         simulation = create_less_random_simulation()
         simulation.state.actions_left = 1
         simulation.state.phase = Phase.INFECTIONS
-        simulation.state._infect_city(City.ATLANTA, times=3)
+        simulation.state.infect_city(City.ATLANTA, times=3)
         simulation.state.outbreaks = 7
         assert simulation.state.game_state == GameState.RUNNING
         simulation.state.infection_deck.insert(0, City.ATLANTA)
@@ -367,7 +369,7 @@ class TestGeneral:
         simulation = create_less_random_simulation()
         simulation.state.actions_left = 1
         simulation.state.phase = Phase.INFECTIONS
-        simulation.state._infect_city(City.ATLANTA, times=3)
+        simulation.state.infect_city(City.ATLANTA, times=3)
         simulation.state.cubes[Virus.BLUE] = 0
         assert simulation.state.game_state == GameState.RUNNING
         simulation.state.infection_deck.insert(0, City.ATLANTA)

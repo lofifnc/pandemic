@@ -11,7 +11,8 @@ from pandemic.simulation.model.actions import (
     TreatDisease,
     DiscoverCure,
     MoveResearchStation,
-    ChooseCard)
+    ChooseCard,
+)
 from pandemic.simulation.model.city_id import City, EventCard
 from pandemic.simulation.model.enums import Character, Virus
 from pandemic.simulation.simulation import Phase, Simulation
@@ -64,14 +65,14 @@ class TestCharacters:
         simulation = create_less_random_simulation(start_player=Character.MEDIC)
 
         # test treat disease
-        simulation.state._infect_city(City.ATLANTA, times=3)
+        simulation.state.infect_city(City.ATLANTA, times=3)
         treat = TreatDisease(City.ATLANTA, Virus.BLUE)
         assert treat in simulation.get_possible_actions()
         simulation.step(treat)
         assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] == 0
 
         # test auto treat
-        simulation.state._infect_city(City.BANGKOK, times=3)
+        simulation.state.infect_city(City.BANGKOK, times=3)
         simulation.state.cities[City.BANGKOK].build_research_station()
         assert simulation.state.cities[City.BANGKOK].get_viral_state()[Virus.RED] == 3
         simulation.state.players[Character.MEDIC].city = City.BANGKOK
@@ -84,16 +85,18 @@ class TestCharacters:
             City.HONG_KONG,
         }
 
-        cure_action = DiscoverCure(
-            target_virus=Virus.RED,
-        )
+        cure_action = DiscoverCure(target_virus=Virus.RED)
         assert cure_action in simulation.get_possible_actions()
         simulation.step(cure_action)
-        cure_virus(simulation, [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG], Character.MEDIC)
+        cure_virus(
+            simulation,
+            [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG],
+            Character.MEDIC,
+        )
         assert simulation.state.cities[City.BANGKOK].get_viral_state()[Virus.RED] == 0
 
         simulation.state.cubes[Virus.RED] = 12
-        simulation.state._infect_city(City.HO_CHI_MINH_CITY, times=3)
+        simulation.state.infect_city(City.HO_CHI_MINH_CITY, times=3)
         assert simulation.state.cities[City.HO_CHI_MINH_CITY].get_viral_state()[Virus.RED] == 3
 
         move = DriveFerry(Character.MEDIC, City.HO_CHI_MINH_CITY)
@@ -189,9 +192,7 @@ class TestCharacters:
             City.MANILA,
         }
 
-        cure_action = DiscoverCure(
-            target_virus=Virus.RED,
-        )
+        cure_action = DiscoverCure(target_virus=Virus.RED)
         assert cure_action in simulation.get_possible_actions()
         simulation.step(cure_action)
         cure_virus(simulation, [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA], Character.SCIENTIST)
@@ -227,9 +228,8 @@ class TestCharacters:
         simulation.step(build)
 
         move_station = MoveResearchStation(Character.SCIENTIST, City.ATLANTA)
-        assert {MoveResearchStation(Character.SCIENTIST, City.WASHINGTON), move_station} == set(
-            simulation.get_possible_actions()
-        )
+        assert set([MoveResearchStation(Character.SCIENTIST, City.WASHINGTON), move_station]) == set(simulation.get_possible_actions())
+
         simulation.step(move_station)
 
         assert simulation.state.research_stations == 0

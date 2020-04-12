@@ -34,7 +34,7 @@ class Simulation:
             _state.draw_cards(action)
         elif _state.phase == Phase.INFECTIONS:
             _state.infections(action)
-        elif _state == Phase.EPIDEMIC:
+        elif _state.phase == Phase.EPIDEMIC:
             _state.epidemic_2nd_part()
 
     @staticmethod
@@ -86,4 +86,4 @@ class Simulation:
         return possible_actions
 
     def reset(self):
-        self.state.reset()
+        self.state = State()
