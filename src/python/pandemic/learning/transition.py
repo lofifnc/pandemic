@@ -1,5 +1,5 @@
 from collections import namedtuple
-from random import random
+import random
 
 Transition = namedtuple("Transition", ("state", "action", "next_state", "reward"))
 

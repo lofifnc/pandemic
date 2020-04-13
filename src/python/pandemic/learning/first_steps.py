@@ -28,7 +28,6 @@ def one_game(env, tactic, max_steps):
             break
         steps += 1
 
-
     result = reward
     # print("game result:", state.get_game_condition())
     # print("steps to result:", steps)
@@ -41,7 +40,7 @@ def statement():
     start = time.time()
     games_run = 0
     results = list()
-    env = PandemicEnvironment()
+    env = PandemicEnvironment(num_epidemic_cards=4, characters=(5,7))
     while res != GameState.WIN and games_run < 100:
         print("game no:", games_run)
         res, steps = one_game(env, random_action, None)

@@ -68,7 +68,6 @@ class PlayerState:
             self._city_cards.add(card)
             self._num_cards += 1
 
-
     def add_cards(self, cards: List[Card]):
         [self.add_card(card) for card in cards]
 

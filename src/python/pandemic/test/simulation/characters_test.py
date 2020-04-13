@@ -228,7 +228,9 @@ class TestCharacters:
         simulation.step(build)
 
         move_station = MoveResearchStation(Character.SCIENTIST, City.ATLANTA)
-        assert set([MoveResearchStation(Character.SCIENTIST, City.WASHINGTON), move_station]) == set(simulation.get_possible_actions())
+        assert set([MoveResearchStation(Character.SCIENTIST, City.WASHINGTON), move_station]) == set(
+            simulation.get_possible_actions()
+        )
 
         simulation.step(move_station)
 

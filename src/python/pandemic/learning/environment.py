@@ -1,15 +1,14 @@
+import math
 from collections import defaultdict
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Set
 
 import gym
 import numpy as np
-from gym import Space
-from scipy import sparse
 
 from pandemic.simulation.model.actions import ACTION_SPACE_DIM
 from pandemic.simulation.model.actions import ActionInterface
 from pandemic.simulation.model.enums import GameState
-from pandemic.simulation.simulation import Simulation
+from pandemic.simulation.simulation import Simulation, PLAYER_COUNT
 
 
 class PandemicEnvironment(gym.Env):
@@ -19,58 +18,72 @@ class PandemicEnvironment(gym.Env):
         self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
         self.observation_space = self._get_obs()
         self._steps = 0
+        self._illegal_actions = 0
+        self.performed_actions_reward.clear()
 
     def render(self, mode="human"):
-        # TODO: maybe later
+        [print("%s %s" % (a, r)) for a, r in self.performed_actions_reward]
+        print("steps: ", self._steps)
+        print("illegal actions: ", self._illegal_actions)
+        print("cures: ", self._simulation.state.cures)
+        print("outbreaks: ", self._simulation.state.outbreaks)
         pass
 
-    def __init__(self):
-        self._simulation = Simulation()
+    def __init__(self, num_epidemic_cards: int = 5, player_count: int = PLAYER_COUNT, characters: Tuple[int] = tuple()):
+        self._simulation = Simulation(num_epidemic_cards, player_count, characters)
         self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
         self.observation_space = self._get_obs()
         self._steps = 0
+        self._illegal_actions = 0
+        self.performed_actions_reward = list()
 
     def step(self, action: int):
-        reward = 0
+        action_statement = self._action_lookup.get(action, None)
+        if action_statement is None:
+            self._illegal_actions += 1
+            return self.observation_space, -1, False, {}
+
         if action == 0:
             self._simulation.step(None)
         else:
             self._steps += 1
-            self._simulation.step(self._action_lookup[action])
-            reward = self._get_reward()
+            self._simulation.step(action_statement)
 
+        reward = self._get_reward()
+        self.performed_actions_reward.append((action_statement, reward))
         self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
 
         self.observation_space = self._get_obs()
-
         done = self._simulation.state.game_state != GameState.RUNNING
         # observation, reward, done, info
         return self.observation_space, reward, done, {}
 
-    def _get_reward(self):
+    def _get_reward(self) -> float:
         # try to come up with sensible reward
         state = self._simulation.state
         # extremely basic reward each cure -> += 0.25
         # each card of same color for player uncured -> += 0.1
         # each turn -> += 0.001
-        card_color_reward = sum(sum(pow(count, 0.01) - 1 for color, count in p.city_colors.items() if not state.cures[color] and count > 1) for p in state.players.values())
+        card_color_reward = sum(
+            sum(pow(count, 0.01) - 1 for color, count in p.city_colors.items() if not state.cures[color] and count > 1)
+            for p in state.players.values()
+        )
         cure_reward = sum(state.cures.values())
         step_reward = self._steps * 0.001
 
-        # each outbreak -> -= 0.2
-        outbreak_reward = state.outbreaks * -0.125
+        # each outbreak -> -x^1.5/25
+        outbreak_reward = math.pow(state.outbreaks,1.5)/25*-1
         reward = card_color_reward + cure_reward + step_reward + outbreak_reward
-        return reward
-
+        return float(reward)
 
     @staticmethod
     def _encode_possible_actions(
-        possible_actions: List[ActionInterface]
+        possible_actions: List[ActionInterface],
     ) -> Tuple[Dict[int, ActionInterface], np.ndarray]:
         if possible_actions is None or possible_actions == []:
             space = np.zeros(ACTION_SPACE_DIM)
             np.put(space, 0, 1)
-            return dict(), space
+            return {0: "Wait"}, space
         lookup = dict()
         features = [0] * ACTION_SPACE_DIM
         bump_dict = defaultdict(int)
@@ -81,8 +94,8 @@ class PandemicEnvironment(gym.Env):
     @staticmethod
     def _insert_action(llm, feature_actions, bump_dict, action):
         idx, value = action.feature
+        bidx = idx + bump_dict[idx]
         bump_dict[idx] += 1
-        bidx = bump_dict[idx] - 1
         feature_actions[bidx] = action
         llm[bidx] = value
         return bidx, value
@@ -139,6 +152,7 @@ class PandemicEnvironment(gym.Env):
         # player characters + player locations
         player_feature_tuples = [(id, player.city) for id, player in state.players.items()]
         player_feature_vector = np.array(list(sum(zip(*player_feature_tuples), ())))
+
         # player cards
         hands_feature_vector = np.ndarray.flatten(
             np.array(

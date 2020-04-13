@@ -1,7 +1,7 @@
 import itertools
 import logging
 from random import shuffle, sample
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Tuple
 
 import numpy as np
 
@@ -14,18 +14,20 @@ from pandemic.simulation.model.playerstate import PlayerState
 
 
 class State:
-    def __init__(self, player_count: int = PLAYER_COUNT):
-        self.init(player_count)
+    def __init__(
+        self, num_epidemic_cards=5, player_count: int = PLAYER_COUNT, characters: Tuple[int] = tuple(),
+    ):
+        self.num_epidemic_cards = num_epidemic_cards
+        self.characters = characters if characters else sample(tuple(Character.__members__), k=player_count)
+        self.init()
 
     # noinspection PyAttributeOutsideInit
     # @profile
-    def init(self, player_count: int):
+    def init(self):
         self.phase_state = None
         self.phase = Phase.SETUP
         # players
-        self.players: Dict[Character, PlayerState] = {
-            c: PlayerState() for c in sample(tuple(Character.__members__), k=player_count)
-        }
+        self.players: Dict[Character, PlayerState] = {c: PlayerState() for c in self.characters}
 
         self.active_player: Character = list(self.players.keys())[0]
 
@@ -56,8 +58,8 @@ class State:
 
         self.player_deck: List[Card] = list(self.cities.keys()) + list(EventCard.__members__)
         shuffle(self.player_deck)
-        self._serve_player_cards(player_count)
-        self._prepare_player_deck()
+        self._serve_player_cards(len(self.characters))
+        self._prepare_player_deck(self.num_epidemic_cards)
         self.player_discard_pile: List[Card] = []
 
         self._add_neighbors_to_city_state()
@@ -69,7 +71,7 @@ class State:
         self.phase = Phase.ACTIONS
 
     def reset(self):
-        self.init(len(self.players))
+        self.init()
 
     def _init_infection_markers(self):
         [self.__draw_and_infect(i) for i in range(3, 0, -1)]
@@ -94,12 +96,9 @@ class State:
         if color is None:
             color = city_state.color
 
-        print(city_state.name, city_state.viral_state[color])
-
-        if (
-            self._is_city_protected_by_quarantine(city)
-            or (self.cures[color]
-            and (self.cubes[color] == COUNT_CUBES or self._character_location(Character.MEDIC) == city))
+        if self._is_city_protected_by_quarantine(city) or (
+            self.cures[color]
+            and (self.cubes[color] == COUNT_CUBES or self._character_location(Character.MEDIC) == city)
         ):
             # virus has been eradicated or city is protected by medic or quarantine expert
             return outbreak_occurred
@@ -178,11 +177,11 @@ class State:
         index_of_active_player = list_of_player_colors.index(self.active_player)
         return list_of_player_colors[(index_of_active_player + 1) % len(list_of_player_colors)]
 
-    def _prepare_player_deck(self):
+    def _prepare_player_deck(self, num_epidemic_cards):
         prepared_deck: List[Card] = []
         city_cards = self.player_deck
         shuffle(city_cards)
-        chunks = np.array_split(city_cards, EPIDEMIC_CARDS)
+        chunks = np.array_split(city_cards, num_epidemic_cards)
         epidemic_cards = list(EpidemicCard.__members__)
         [self.__prepare_chunk(c, epidemic_cards, prepared_deck) for c in chunks]
         self.player_deck = prepared_deck
@@ -227,7 +226,6 @@ class State:
         self.phase = Phase.EPIDEMIC
         self.infection_rate_marker += 1
         bottom_card = self.infection_deck.pop(-1)
-        print("epidemic!!!")
         logging.info("Epidemic in %s!" % bottom_card)
         self.infect_city(bottom_card, times=3)
         self.infection_discard_pile.append(bottom_card)
@@ -262,13 +260,13 @@ class State:
     """
 
     def _outbreak(self, city: City, color: Virus, outbreaks: Set[City] = None):
-        print("outbreak")
         if outbreaks is None:
             outbreaks = set()
         if city not in outbreaks:
             self.outbreaks += 1
             if self.outbreaks > 7:
                 self.game_state = GameState.LOST
+                return
             neighbors = self.cities[city].neighbors
             for n in neighbors:
                 has_outbreak = self._infect_city(n, color, 1)

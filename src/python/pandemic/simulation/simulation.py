@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from pandemic.simulation.actions.events import event_action, get_possible_event_actions
 from pandemic.simulation.actions.moves import move_player, get_possible_move_actions
@@ -11,8 +11,8 @@ from pandemic.simulation.state import State
 
 
 class Simulation:
-    def __init__(self, player_count: int = PLAYER_COUNT):
-        self.state = State(player_count)
+    def __init__(self, num_epidemic_cards: int = 5, player_count: int = PLAYER_COUNT, characters: Tuple[int] = tuple()):
+        self.state = State(num_epidemic_cards, player_count, characters)
 
     def step(self, action: Optional[ActionInterface]):
         _state = self.state
@@ -28,7 +28,7 @@ class Simulation:
         elif isinstance(action, Event):
             event_action(_state, action)
 
-        if _state.phase == Phase.ACTIONS and not isinstance(action, Event):
+        if _state.phase == Phase.ACTIONS and not isinstance(action, Event) and action is not None:
             self.actions(_state, action)
         elif _state.phase == Phase.DRAW_CARDS:
             _state.draw_cards(action)
@@ -79,11 +79,7 @@ class Simulation:
             possible_actions.extend(
                 get_possible_move_actions(state, player) + get_possible_other_actions(state, player)
             )
-        if state.phase is Phase.DRAW_CARDS:
-            return possible_actions
-        if state.phase is Phase.INFECTIONS:
-            return possible_actions
         return possible_actions
 
     def reset(self):
-        self.state = State()
+        self.state.reset()

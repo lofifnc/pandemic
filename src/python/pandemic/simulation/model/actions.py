@@ -8,6 +8,7 @@ from pandemic.simulation.model.enums import Virus, Character
 def _csum(nums: List[int]):
     return sum((n * pow(100, idx) for idx, n in enumerate(nums)), 0)
 
+
 @dataclass(unsafe_hash=True)
 class ActionInterface:
     index = None
@@ -245,7 +246,7 @@ class Airlift(Event):
 @dataclass(unsafe_hash=True)
 class ResilientPopulation(Event):
     index = Airlift.index + Airlift.dim
-    dim = 1
+    dim = 48
 
     discard_city: City
 
