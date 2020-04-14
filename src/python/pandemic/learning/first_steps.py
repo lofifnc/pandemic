@@ -40,7 +40,7 @@ def statement():
     start = time.time()
     games_run = 0
     results = list()
-    env = PandemicEnvironment(num_epidemic_cards=4, characters=(5,7))
+    env = PandemicEnvironment(num_epidemic_cards=4, characters=(5, 7))
     while res != GameState.WIN and games_run < 100:
         print("game no:", games_run)
         res, steps = one_game(env, random_action, None)

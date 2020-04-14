@@ -41,7 +41,7 @@ class PandemicEnvironment(gym.Env):
         action_statement = self._action_lookup.get(action, None)
         if action_statement is None:
             self._illegal_actions += 1
-            return self.observation_space, -1, False, {}
+            return self.observation_space, -1, False, {"steps": self._steps}
 
         if action == 0:
             self._simulation.step(None)
@@ -56,7 +56,7 @@ class PandemicEnvironment(gym.Env):
         self.observation_space = self._get_obs()
         done = self._simulation.state.game_state != GameState.RUNNING
         # observation, reward, done, info
-        return self.observation_space, reward, done, {}
+        return self.observation_space, reward, done, {"steps": self._steps}
 
     def _get_reward(self) -> float:
         # try to come up with sensible reward
@@ -72,7 +72,7 @@ class PandemicEnvironment(gym.Env):
         step_reward = self._steps * 0.001
 
         # each outbreak -> -x^1.5/25
-        outbreak_reward = math.pow(state.outbreaks,1.5)/25*-1
+        outbreak_reward = math.pow(state.outbreaks, 1.5) / 25 * -1
         reward = card_color_reward + cure_reward + step_reward + outbreak_reward
         return float(reward)
 
