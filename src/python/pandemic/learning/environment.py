@@ -11,7 +11,7 @@ from pandemic.simulation.model.enums import GameState
 from pandemic.simulation.simulation import Simulation, PLAYER_COUNT
 
 
-class Pandemic(gym.Env):
+class PandemicEnvironment(gym.Env):
     def reset(self):
         # TODO: smarter reset
         self._simulation.reset()
@@ -41,7 +41,7 @@ class Pandemic(gym.Env):
         action_statement = self._action_lookup.get(action, None)
         if action_statement is None:
             self._illegal_actions += 1
-            return self.observation_space, 0, False, {"steps": self._steps}
+            return self.observation_space, -1, False, {"steps": self._steps}
 
         if action == 0:
             self._simulation.step(None)
@@ -49,7 +49,7 @@ class Pandemic(gym.Env):
             self._steps += 1
             self._simulation.step(action_statement)
 
-        reward = 1
+        reward = self._get_reward()
         self.performed_actions_reward.append((action_statement, reward))
         self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
 
@@ -87,7 +87,7 @@ class Pandemic(gym.Env):
         lookup = dict()
         features = [0] * ACTION_SPACE_DIM
         bump_dict = defaultdict(int)
-        [Pandemic._insert_action(features, lookup, bump_dict, action) for action in possible_actions]
+        [PandemicEnvironment._insert_action(features, lookup, bump_dict, action) for action in possible_actions]
 
         return lookup, np.array(features)
 
@@ -106,7 +106,7 @@ class Pandemic(gym.Env):
             feature_actions[index] = value
             return index
         else:
-            return Pandemic.__insert_with_shift(feature_actions, index + 1, value)
+            return PandemicEnvironment.__insert_with_shift(feature_actions, index + 1, value)
 
     def _get_obs(self) -> np.array:
         state = self._simulation.state
@@ -157,7 +157,7 @@ class Pandemic(gym.Env):
         hands_feature_vector = np.ndarray.flatten(
             np.array(
                 [
-                    Pandemic.pad_with_zeros(10, np.array(list(player.cards)))
+                    PandemicEnvironment.pad_with_zeros(10, np.array(list(player.cards)))
                     for player in state.players.values()
                 ]
             )
