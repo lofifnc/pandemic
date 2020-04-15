@@ -67,14 +67,12 @@ class State:
         if self.infect_deck_shuffle_seed is not None:
             self.random.seed(self.infect_deck_shuffle_seed)
         self.random.shuffle(self.infection_deck)
-        print(self.random.randint(1, 20))
         self.infection_discard_pile: List[City] = []
 
         self.player_deck: List[Card] = list(self.cities.keys()) + list(EventCard.__members__)
         if self.infect_deck_shuffle_seed is not None:
             self.random.seed(self.infect_deck_shuffle_seed)
         self.random.shuffle(self.player_deck)
-        print(self.random.randint(1, 20))
         self._serve_player_cards(len(self.characters))
         self._prepare_player_deck(self.num_epidemic_cards)
         self.player_discard_pile: List[Card] = []
@@ -201,7 +199,6 @@ class State:
         prepared_deck: List[Card] = []
         city_cards = self.player_deck
         self.random.shuffle(city_cards)
-        print(self.random.randint(1, 20))
         chunks = np.array_split(city_cards, num_epidemic_cards)
         epidemic_cards = list(EpidemicCard.__members__)
         [self.__prepare_chunk(c, epidemic_cards, prepared_deck) for c in chunks]
@@ -211,7 +208,6 @@ class State:
         d = list(c)
         d.append(epidemic_cards.pop())
         self.random.shuffle(d)
-        print(self.random.randint(1, 20))
         prepared_deck.extend(d)
 
     def _add_neighbors_to_city_state(self):
@@ -247,13 +243,12 @@ class State:
         self.phase = Phase.EPIDEMIC
         self.infection_rate_marker += 1
         bottom_card = self.infection_deck.pop(-1)
-        logging.error("Epidemic in %s!" % bottom_card)
+        logging.info("Epidemic in %s!" % bottom_card)
         self.infect_city(bottom_card, times=3)
         self.infection_discard_pile.append(bottom_card)
 
     def epidemic_2nd_part(self):
         self.random.shuffle(self.infection_discard_pile)
-        print("epidemic ", self.random.randint(1, 20))
         self.infection_deck = self.infection_discard_pile.copy() + self.infection_deck
         self.infection_discard_pile.clear()
         if self.drawn_cards == 2:
