@@ -11,8 +11,23 @@ from pandemic.simulation.state import State
 
 
 class Simulation:
-    def __init__(self, num_epidemic_cards: int = 5, player_count: int = PLAYER_COUNT, characters: Tuple[int] = tuple()):
-        self.state = State(num_epidemic_cards, player_count, characters)
+    def __init__(
+        self,
+        num_epidemic_cards: int = 5,
+        player_count: int = PLAYER_COUNT,
+        characters: Tuple[int] = tuple(),
+        player_deck_shuffle_seed=None,
+        infect_deck_shuffle_seed=None,
+        epidemic_shuffle_seed=None,
+    ):
+        self.state = State(
+            num_epidemic_cards,
+            player_count,
+            characters,
+            player_deck_shuffle_seed,
+            infect_deck_shuffle_seed,
+            epidemic_shuffle_seed,
+        )
 
     def step(self, action: Optional[ActionInterface]):
         _state = self.state

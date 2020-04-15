@@ -1,6 +1,6 @@
 import itertools
 import logging
-from random import shuffle, sample
+import random
 from typing import List, Set, Optional, Tuple
 
 import numpy as np
@@ -15,10 +15,21 @@ from pandemic.simulation.model.playerstate import PlayerState
 
 class State:
     def __init__(
-        self, num_epidemic_cards=5, player_count: int = PLAYER_COUNT, characters: Tuple[int] = tuple(),
+        self,
+        num_epidemic_cards=5,
+        player_count: int = PLAYER_COUNT,
+        characters: Tuple[int] = tuple(),
+        player_deck_shuffle_seed=None,
+        infect_deck_shuffle_seed=None,
+        epidemic_shuffle_seed=None,
     ):
+        self.epidemic_shuffle_seed = epidemic_shuffle_seed
+        self.infect_deck_shuffle_seed = infect_deck_shuffle_seed
         self.num_epidemic_cards = num_epidemic_cards
-        self.characters = characters if characters else sample(tuple(Character.__members__), k=player_count)
+        self.player_deck_shuffle_seed = player_deck_shuffle_seed
+        self.random = random.Random()
+        # TODO: allow for new player shuffle on reset:
+        self.characters = characters if characters else random.sample(tuple(Character.__members__), k=player_count)
         self.init()
 
     # noinspection PyAttributeOutsideInit
@@ -53,11 +64,17 @@ class State:
         # cards
         self.cities = create_cities_init_state()
         self.infection_deck: List[City] = list(self.cities.keys())
-        shuffle(self.infection_deck)
+        if self.infect_deck_shuffle_seed is not None:
+            self.random.seed(self.infect_deck_shuffle_seed)
+        self.random.shuffle(self.infection_deck)
+        print(self.random.randint(1, 20))
         self.infection_discard_pile: List[City] = []
 
         self.player_deck: List[Card] = list(self.cities.keys()) + list(EventCard.__members__)
-        shuffle(self.player_deck)
+        if self.infect_deck_shuffle_seed is not None:
+            self.random.seed(self.infect_deck_shuffle_seed)
+        self.random.shuffle(self.player_deck)
+        print(self.random.randint(1, 20))
         self._serve_player_cards(len(self.characters))
         self._prepare_player_deck(self.num_epidemic_cards)
         self.player_discard_pile: List[Card] = []
@@ -69,6 +86,8 @@ class State:
         self._init_infection_markers()
         self.previous_phase = self.phase
         self.phase = Phase.ACTIONS
+        if self.epidemic_shuffle_seed is not None:
+            self.random.seed(self.epidemic_shuffle_seed)
 
     def reset(self):
         self.init()
@@ -147,8 +166,9 @@ class State:
             self.players[self.active_player].add_card(self.draw_card())
             self.drawn_cards += 1
         if self.drawn_cards == 2:
-            self.drawn_cards = 0
-            self.phase = Phase.INFECTIONS
+            if self.phase != Phase.EPIDEMIC:
+                self.drawn_cards = 0
+                self.phase = Phase.INFECTIONS
 
     def infections(self, action: ActionInterface):
         if self.infections_steps == 0 and self.one_quiet_night:
@@ -180,17 +200,18 @@ class State:
     def _prepare_player_deck(self, num_epidemic_cards):
         prepared_deck: List[Card] = []
         city_cards = self.player_deck
-        shuffle(city_cards)
+        self.random.shuffle(city_cards)
+        print(self.random.randint(1, 20))
         chunks = np.array_split(city_cards, num_epidemic_cards)
         epidemic_cards = list(EpidemicCard.__members__)
         [self.__prepare_chunk(c, epidemic_cards, prepared_deck) for c in chunks]
         self.player_deck = prepared_deck
 
-    @staticmethod
-    def __prepare_chunk(c, epidemic_cards, prepared_deck):
+    def __prepare_chunk(self, c, epidemic_cards, prepared_deck):
         d = list(c)
         d.append(epidemic_cards.pop())
-        shuffle(d)
+        self.random.shuffle(d)
+        print(self.random.randint(1, 20))
         prepared_deck.extend(d)
 
     def _add_neighbors_to_city_state(self):
@@ -226,15 +247,20 @@ class State:
         self.phase = Phase.EPIDEMIC
         self.infection_rate_marker += 1
         bottom_card = self.infection_deck.pop(-1)
-        logging.info("Epidemic in %s!" % bottom_card)
+        logging.error("Epidemic in %s!" % bottom_card)
         self.infect_city(bottom_card, times=3)
         self.infection_discard_pile.append(bottom_card)
 
     def epidemic_2nd_part(self):
-        shuffle(self.infection_discard_pile)
+        self.random.shuffle(self.infection_discard_pile)
+        print("epidemic ", self.random.randint(1, 20))
         self.infection_deck = self.infection_discard_pile.copy() + self.infection_deck
         self.infection_discard_pile.clear()
-        self.phase = Phase.DRAW_CARDS
+        if self.drawn_cards == 2:
+            self.drawn_cards = 0
+            self.phase = Phase.INFECTIONS
+        else:
+            self.phase = Phase.DRAW_CARDS
 
     def draw_player_cards(self, count) -> List[Card]:
         drawn_cards: List[Card] = []

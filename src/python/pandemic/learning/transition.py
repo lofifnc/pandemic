@@ -23,7 +23,7 @@ class ReplayMemory(object):
     def sample_slice(self, slice_size):
         len_memory = len(self.memory)
         start = random.randint(0, len_memory - slice_size)
-        return  self.memory[start:start + slice_size]
+        return self.memory[start : start + slice_size]
 
     def __len__(self):
         return len(self.memory)

@@ -21,7 +21,9 @@ class PandemicEnvironment(gym.Env):
         self._illegal_actions = 0
         self.performed_actions_reward.clear()
 
-    def render(self, mode="human"):
+    def render(
+        self, mode="human",
+    ):
         [print("%s %s" % (a, r)) for a, r in self.performed_actions_reward]
         print("steps: ", self._steps)
         print("illegal actions: ", self._illegal_actions)
@@ -29,8 +31,23 @@ class PandemicEnvironment(gym.Env):
         print("outbreaks: ", self._simulation.state.outbreaks)
         pass
 
-    def __init__(self, num_epidemic_cards: int = 5, player_count: int = PLAYER_COUNT, characters: Tuple[int] = tuple()):
-        self._simulation = Simulation(num_epidemic_cards, player_count, characters)
+    def __init__(
+        self,
+        num_epidemic_cards: int = 5,
+        player_count: int = PLAYER_COUNT,
+        characters: Tuple[int] = tuple(),
+        player_deck_shuffle_seed=None,
+        infect_deck_shuffle_seed=None,
+        epidemic_shuffle_seed=None,
+    ):
+        self._simulation = Simulation(
+            num_epidemic_cards,
+            player_count,
+            characters,
+            player_deck_shuffle_seed,
+            infect_deck_shuffle_seed,
+            epidemic_shuffle_seed,
+        )
         self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
         self.observation_space = self._get_obs()
         self._steps = 0
