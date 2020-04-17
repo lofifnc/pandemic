@@ -14,7 +14,7 @@ from pandemic.simulation.model.actions import (
 )
 from pandemic.simulation.model.enums import Character, Virus
 from pandemic.simulation.model.phases import Phase
-from pandemic.simulation.model.playerstate import PlayerState
+from pandemic.simulation.model.playerstate import PlayerState, CITY_DATA
 from pandemic.simulation.state import State, City
 
 
@@ -56,7 +56,7 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
     # What is treatable?
     possible_actions.extend(
         TreatDisease(current_city, target_virus=virus)
-        for virus, count in current_city_state.get_viral_state().items()
+        for virus, count in current_city_state.viral_state.items()
         if count > 0
     )
 
@@ -72,7 +72,7 @@ def get_possible_other_actions(state: State, character: Character = None) -> Lis
     cards_for_cure = num_cards_for_cure(character)
     player_city_cards = player.city_cards
     if current_city_state.has_research_station() and len(player_city_cards) >= cards_for_cure:
-        player_card_viruses = [state.cities[card].color for card in player.city_cards]
+        player_card_viruses = [CITY_DATA[card].color for card in player.city_cards]
         append = possible_actions.append
         for virus, count in Counter(player_card_viruses).items():
             if count >= cards_for_cure and not state.cures[virus]:

@@ -15,7 +15,7 @@ from pandemic.simulation.model.actions import (
 from pandemic.simulation.model.city_id import EventCard
 from pandemic.simulation.model.enums import Character
 from pandemic.simulation.model.phases import ChooseCardsPhase, Phase
-from pandemic.simulation.state import State
+from pandemic.simulation.state import State, CITY_DATA
 
 
 def event_action(state: State, event: Event):
@@ -114,7 +114,7 @@ def __cure_virus_after(state, p, cards):
 def __init_cure_virus(state: State):
     active_player = state.active_player
     cure_cards = {
-        city for city in state.players[active_player].city_cards if state.cities[city].color == state.virus_to_cure
+        city for city in state.players[active_player].city_cards if CITY_DATA[city].color == state.virus_to_cure
     }
     ccp = ChooseCardsPhase(
         next_phase=state.previous_phase,

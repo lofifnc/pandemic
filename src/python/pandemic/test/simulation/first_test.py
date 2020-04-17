@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from pandemic.simulation.model.actions import (
     Event,
     DiscardCard,
@@ -128,39 +130,7 @@ class TestGeneral:
     def test_whole_round():
         simulation = Simulation()
 
-        for i in range(1, 4):
-            action = simulation.get_possible_actions()
-            assert action != set()
-            simulation.step(filter_out_events(action, Event).pop())
-            assert simulation.state.phase == Phase.ACTIONS
-
-        action = simulation.get_possible_actions()
-        assert action != set()
-        simulation.step(filter_out_events(action, Event).pop())
-        # draw phase
-        assert simulation.state.phase == Phase.DRAW_CARDS
-
-        assert all(isinstance(action, Event) for action in simulation.get_possible_actions())
-        simulation.step(None)
-
-        if simulation.state.phase == Phase.EPIDEMIC:
-            simulation.step(None)
-
-        assert simulation.state.phase == Phase.DRAW_CARDS
-        assert all(isinstance(action, Event) for action in simulation.get_possible_actions())
-        simulation.step(None)
-
-        # infection phase
-        assert simulation.state.phase == Phase.INFECTIONS
-
-        assert all(isinstance(action, Event) for action in simulation.get_possible_actions())
-        simulation.step(None)
-        assert simulation.state.phase == Phase.INFECTIONS
-        assert all(isinstance(action, Event) for action in simulation.get_possible_actions())
-        simulation.step(None)
-
-        # next player
-        assert simulation.state.phase == Phase.ACTIONS
+        TestGeneral.walk_trough_round(simulation)
 
     @staticmethod
     def test_treat_city_with_cure():
@@ -170,11 +140,11 @@ class TestGeneral:
         simulation.state.infect_city(City.ATLANTA, times=3)
         simulation.state.cures[Virus.BLUE] = True
 
-        assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] == 3
+        assert simulation.state.cities[City.ATLANTA].viral_state[Virus.BLUE] == 3
         other = TreatDisease(City.ATLANTA, target_virus=Virus.BLUE)
         assert other in simulation.get_possible_actions()
         simulation.step(other)
-        assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] == 0
+        assert simulation.state.cities[City.ATLANTA].viral_state[Virus.BLUE] == 0
 
     @staticmethod
     def test_infect_city_with_eradicated_virus():
@@ -183,11 +153,11 @@ class TestGeneral:
         # cheat and pretend virus is eradicated
         simulation.state.cures[Virus.BLUE] = True
         simulation.state.cubes[Virus.BLUE] = 24
-        simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] = 0
+        simulation.state.cities[City.ATLANTA].viral_state[Virus.BLUE] = 0
 
-        assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] == 0
+        assert simulation.state.cities[City.ATLANTA].viral_state[Virus.BLUE] == 0
         simulation.state.infect_city(City.ATLANTA, times=2)
-        assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] == 0
+        assert simulation.state.cities[City.ATLANTA].viral_state[Virus.BLUE] == 0
 
     @staticmethod
     def test_outbreak():
@@ -375,3 +345,85 @@ class TestGeneral:
         simulation.state.infection_deck.insert(0, City.ATLANTA)
         simulation.step(None)
         assert simulation.state.game_state == GameState.LOST
+
+    @staticmethod
+    def test_state_copy():
+        simulation = Simulation()
+
+        state_copy = deepcopy(simulation.state.internal_state)
+        assert state_copy == simulation.state.internal_state
+
+        TestGeneral.walk_trough_round(simulation)
+
+        assert state_copy != simulation.state.internal_state
+        simulation.state.internal_state = state_copy
+
+        TestGeneral.walk_trough_round(simulation)
+
+    @staticmethod
+    def test_deterministic_simulation():
+        simulation = Simulation(
+            characters={Character.RESEARCHER, Character.CONTINGENCY_PLANNER},
+            player_deck_shuffle_seed=10,
+            infect_deck_shuffle_seed=30,
+            epidemic_shuffle_seed=12,
+        )
+        before_state_copy = deepcopy(simulation.state.internal_state)
+        TestGeneral.walk_trough_round(simulation)
+        assert before_state_copy != simulation.state.internal_state
+        # reset simulation
+        after_state_copy = deepcopy(simulation.state.internal_state)
+        simulation.state.internal_state = before_state_copy
+        TestGeneral.walk_trough_round(simulation)
+        assert simulation.state.internal_state == after_state_copy
+
+    @staticmethod
+    def walk_trough_round(simulation):
+        for i in range(1, 4):
+            action = simulation.get_possible_actions()
+            assert action != set()
+            simulation.step(filter_out_events(action, Event).pop())
+            assert simulation.state.phase == Phase.ACTIONS
+        action = simulation.get_possible_actions()
+        assert action != set()
+        simulation.step(filter_out_events(action, Event).pop())
+        # draw phase
+        assert simulation.state.phase == Phase.DRAW_CARDS
+        assert all(isinstance(action, Event) for action in simulation.get_possible_actions())
+        simulation.step(None)
+        if simulation.state.phase == Phase.EPIDEMIC:
+            simulation.step(None)
+        assert simulation.state.phase == Phase.DRAW_CARDS
+        assert all(isinstance(action, Event) for action in simulation.get_possible_actions())
+        simulation.step(None)
+        # infection phase
+        assert simulation.state.phase == Phase.INFECTIONS
+        assert all(isinstance(action, Event) for action in simulation.get_possible_actions())
+        simulation.step(None)
+        assert simulation.state.phase == Phase.INFECTIONS
+        assert all(isinstance(action, Event) for action in simulation.get_possible_actions())
+        simulation.step(None)
+        # next player
+        assert simulation.state.phase == Phase.ACTIONS
+
+    @staticmethod
+    def test_dissect_state_copy():
+        simulation = Simulation()
+
+        state = simulation.state.internal_state
+        state_copy = deepcopy(simulation.state.internal_state)
+
+        infection_deck_mcopy = state.infection_deck
+        assert state_copy.infection_deck == infection_deck_mcopy
+        state.infection_deck = []
+        assert state_copy.infection_deck != []
+        assert state_copy.infection_deck == infection_deck_mcopy
+
+        state.cities[City.ATLANTA].remove_research_station()
+
+        assert state_copy.cities[City.ATLANTA].has_research_station()
+        assert not state.cities[City.ATLANTA].has_research_station()
+
+        semi_random_player = list(state.players.keys())[0]
+        state.players[semi_random_player].clear_cards()
+        assert state.players[semi_random_player].cards != {}

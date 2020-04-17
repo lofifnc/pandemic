@@ -21,9 +21,7 @@ class PandemicEnvironment(gym.Env):
         self._illegal_actions = 0
         self.performed_actions_reward.clear()
 
-    def render(
-        self, mode="human",
-    ):
+    def render(self, mode="human"):
         [print("%s %s" % (a, r)) for a, r in self.performed_actions_reward]
         print("steps: ", self._steps)
         print("illegal actions: ", self._illegal_actions)

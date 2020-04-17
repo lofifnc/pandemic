@@ -1,22 +1,23 @@
 from collections import defaultdict
-from typing import List, Set, Optional
+from dataclasses import field
+from typing import List, Optional
 
 from pandemic.simulation.model import constants
 from pandemic.simulation.model.city_id import Card, EventCard
 from pandemic.simulation.model.constants import *
 
 
+@dataclass
 class PlayerState:
-    def __init__(self):
-        self.city = PLAYER_START
-        self._city_cards: Set[City] = set()
-        self._event_cards: Set[EventCard] = set()
-        # character specific state
-        self._contingency_planner_event_card: Optional[Card] = None
-        self._contingency_planner_city_card: Optional[Card] = None
-        self._operations_expert_special_shuttle = True
-        self._num_cards = 0
-        self._city_colors = defaultdict(int)
+
+    city: int = PLAYER_START
+    _city_cards: Set[City] = field(default_factory=set)
+    _event_cards: Set[EventCard] = field(default_factory=set)
+    _contingency_planner_event_card: Optional[Card] = None
+    _contingency_planner_city_card: Optional[Card] = None
+    _operations_expert_special_shuttle: bool = True
+    _num_cards: int = 0
+    _city_colors: Dict[int, int] = field(default_factory=lambda: defaultdict(int))
 
     @property
     def cards(self) -> Set[Card]:

@@ -11,11 +11,10 @@ from pandemic.simulation.model.actions import (
     TreatDisease,
     DiscoverCure,
     MoveResearchStation,
-    ChooseCard,
 )
 from pandemic.simulation.model.city_id import City, EventCard
 from pandemic.simulation.model.enums import Character, Virus
-from pandemic.simulation.simulation import Phase, Simulation
+from pandemic.simulation.simulation import Phase
 
 from pandemic.test.utils import create_less_random_simulation, cure_virus
 
@@ -69,12 +68,12 @@ class TestCharacters:
         treat = TreatDisease(City.ATLANTA, Virus.BLUE)
         assert treat in simulation.get_possible_actions()
         simulation.step(treat)
-        assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.BLUE] == 0
+        assert simulation.state.cities[City.ATLANTA].viral_state[Virus.BLUE] == 0
 
         # test auto treat
         simulation.state.infect_city(City.BANGKOK, times=3)
         simulation.state.cities[City.BANGKOK].build_research_station()
-        assert simulation.state.cities[City.BANGKOK].get_viral_state()[Virus.RED] == 3
+        assert simulation.state.cities[City.BANGKOK].viral_state[Virus.RED] == 3
         simulation.state.players[Character.MEDIC].city = City.BANGKOK
 
         simulation.state.players[Character.MEDIC]._city_cards = {
@@ -93,20 +92,20 @@ class TestCharacters:
             [City.BANGKOK, City.HO_CHI_MINH_CITY, City.BEIJING, City.MANILA, City.HONG_KONG],
             Character.MEDIC,
         )
-        assert simulation.state.cities[City.BANGKOK].get_viral_state()[Virus.RED] == 0
+        assert simulation.state.cities[City.BANGKOK].viral_state[Virus.RED] == 0
 
         simulation.state.cubes[Virus.RED] = 12
         simulation.state.infect_city(City.HO_CHI_MINH_CITY, times=3)
-        assert simulation.state.cities[City.HO_CHI_MINH_CITY].get_viral_state()[Virus.RED] == 3
+        assert simulation.state.cities[City.HO_CHI_MINH_CITY].viral_state[Virus.RED] == 3
 
         move = DriveFerry(Character.MEDIC, City.HO_CHI_MINH_CITY)
         assert move in simulation.get_possible_actions()
         simulation.step(move)
-        assert simulation.state.cities[City.HO_CHI_MINH_CITY].get_viral_state()[Virus.RED] == 0
+        assert simulation.state.cities[City.HO_CHI_MINH_CITY].viral_state[Virus.RED] == 0
         simulation.state.infection_deck.insert(0, City.HO_CHI_MINH_CITY)
         simulation.state.phase = Phase.INFECTIONS
         simulation.step(None)
-        assert simulation.state.cities[City.HO_CHI_MINH_CITY].get_viral_state()[Virus.RED] == 0
+        assert simulation.state.cities[City.HO_CHI_MINH_CITY].viral_state[Virus.RED] == 0
 
     @staticmethod
     def test_operations_export():
@@ -131,7 +130,7 @@ class TestCharacters:
     def test_quarantine_specialist():
         simulation = create_less_random_simulation(start_player=Character.QUARANTINE_SPECIALIST)
 
-        before = simulation.state.cities[City.HO_CHI_MINH_CITY].get_viral_state()[Virus.RED]
+        before = simulation.state.cities[City.HO_CHI_MINH_CITY].viral_state[Virus.RED]
         outbreaks = simulation.state.outbreaks
 
         simulation.state.infection_deck.insert(0, City.HO_CHI_MINH_CITY)
@@ -139,24 +138,24 @@ class TestCharacters:
         simulation.step(None)
 
         if before < 3:
-            assert simulation.state.cities[City.HO_CHI_MINH_CITY].get_viral_state()[Virus.RED] == before + 1
+            assert simulation.state.cities[City.HO_CHI_MINH_CITY].viral_state[Virus.RED] == before + 1
         else:
             assert simulation.state.outbreaks > outbreaks
 
-        before = simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.RED]
+        before = simulation.state.cities[City.ATLANTA].viral_state[Virus.RED]
         outbreaks = simulation.state.outbreaks
         simulation.state.infection_deck.insert(0, City.ATLANTA)
         simulation.state.phase = Phase.INFECTIONS
         simulation.step(None)
-        assert simulation.state.cities[City.ATLANTA].get_viral_state()[Virus.RED] == before
+        assert simulation.state.cities[City.ATLANTA].viral_state[Virus.RED] == before
         assert outbreaks == simulation.state.outbreaks
 
-        before = simulation.state.cities[City.WASHINGTON].get_viral_state()[Virus.RED]
+        before = simulation.state.cities[City.WASHINGTON].viral_state[Virus.RED]
         outbreaks = simulation.state.outbreaks
         simulation.state.infection_deck.insert(0, City.WASHINGTON)
         simulation.state.phase = Phase.INFECTIONS
         simulation.step(None)
-        assert simulation.state.cities[City.WASHINGTON].get_viral_state()[Virus.RED] == before
+        assert simulation.state.cities[City.WASHINGTON].viral_state[Virus.RED] == before
         assert outbreaks == simulation.state.outbreaks
 
     @staticmethod

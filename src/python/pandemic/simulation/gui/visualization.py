@@ -138,7 +138,7 @@ class Visualization:
         lon = city_state.lon
         lat = city_state.lat
 
-        for idx, virus in enumerate(city_state.get_viral_state().keys()):
+        for idx, virus in enumerate(city_state.viral_state.keys()):
             for i in range(0, 3):
                 t = transforms.offset_copy(city_plot.get_transform(), x=-8 + i * 8, y=-10 + idx * -8, units="dots")
                 vm = self._ax.plot(lon, lat, "x", transform=t, visible=False)[0]
@@ -152,7 +152,7 @@ class Visualization:
         city_marker = self._virus_marker[city_id]
         [m.set_visible(False) for m in city_marker]
         i = 0
-        for virus, count in location.get_viral_state().items():
+        for virus, count in location.viral_state.items():
             for _ in range(0, count):
                 city_marker[i].set_visible(True)
                 city_marker[i].set_color(virus)

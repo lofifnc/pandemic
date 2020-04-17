@@ -1,7 +1,7 @@
 import itertools
 import logging
 import random
-from typing import List, Set, Optional, Tuple
+from typing import List, Optional, Tuple, Any
 
 import numpy as np
 
@@ -11,6 +11,43 @@ from pandemic.simulation.model.constants import *
 from pandemic.simulation.model.enums import Character, GameState
 from pandemic.simulation.model.phases import ChooseCardsPhase, Phase
 from pandemic.simulation.model.playerstate import PlayerState
+
+
+@dataclass
+class InternalState:
+
+    phase_state: Any
+    previous_phase: int
+    phase: int
+    # players
+    players: Dict[Character, PlayerState]
+
+    active_player: int
+
+    research_stations: int
+    outbreaks: int
+    infection_rate_marker: int
+    cubes: Dict[int, int]
+
+    actions_left: int
+    cures: Dict[int, bool]
+    one_quiet_night: bool
+
+    # phase specific state
+    drawn_cards: int
+    infections_steps: int
+    last_build_research_station: int
+    virus_to_cure: Optional[int]
+
+    # cards
+    cities: Dict[int, CityState]
+    infection_deck: List[int]
+    infection_discard_pile: List[City]
+
+    player_deck: List[Card]
+    player_discard_pile: List[Card]
+
+    game_state: int
 
 
 class State:
@@ -30,60 +67,62 @@ class State:
         self.random = random.Random()
         # TODO: allow for new player shuffle on reset:
         self.characters = characters if characters else random.sample(tuple(Character.__members__), k=player_count)
+        self.internal_state: InternalState = None
         self.init()
 
-    # noinspection PyAttributeOutsideInit
     # @profile
     def init(self):
-        self.phase_state = None
-        self.phase = Phase.SETUP
-        # players
-        self.players: Dict[Character, PlayerState] = {c: PlayerState() for c in self.characters}
 
-        self.active_player: Character = list(self.players.keys())[0]
+        players = {c: PlayerState() for c in self.characters}
 
-        # counters
-        self.research_stations = 5
-        self.outbreaks = 0
-        self.infection_rate_marker = 0
-        self.cubes = {
-            Virus.YELLOW: COUNT_CUBES,
-            Virus.BLACK: COUNT_CUBES,
-            Virus.BLUE: COUNT_CUBES,
-            Virus.RED: COUNT_CUBES,
-        }
-        self.actions_left = PLAYER_ACTIONS
-        self.cures: Dict[Virus, bool] = {Virus.YELLOW: False, Virus.BLACK: False, Virus.BLUE: False, Virus.RED: False}
-        self.one_quiet_night = False
-        # phase specific state
-        self.drawn_cards = 0
-        self.infections_steps = 0
-        self.last_build_research_station = City.ATLANTA
-        self.virus_to_cure = None
+        infection_deck: List[City] = list(city_colors.keys())
 
-        # cards
-        self.cities = create_cities_init_state()
-        self.infection_deck: List[City] = list(self.cities.keys())
         if self.infect_deck_shuffle_seed is not None:
             self.random.seed(self.infect_deck_shuffle_seed)
-        self.random.shuffle(self.infection_deck)
-        self.infection_discard_pile: List[City] = []
+        self.random.shuffle(infection_deck)
 
-        self.player_deck: List[Card] = list(self.cities.keys()) + list(EventCard.__members__)
         if self.infect_deck_shuffle_seed is not None:
             self.random.seed(self.infect_deck_shuffle_seed)
-        self.random.shuffle(self.player_deck)
+
+        player_deck: List[Card] = list(city_colors.keys()) + list(EventCard.__members__)
+        self.random.shuffle(player_deck)
+
+        self.internal_state = InternalState(
+            players=players,
+            active_player=list(players.keys())[0],
+            research_stations=5,
+            outbreaks=0,
+            infection_rate_marker=0,
+            cubes={
+                Virus.YELLOW: COUNT_CUBES,
+                Virus.BLACK: COUNT_CUBES,
+                Virus.BLUE: COUNT_CUBES,
+                Virus.RED: COUNT_CUBES,
+            },
+            actions_left=PLAYER_ACTIONS,
+            cures={Virus.YELLOW: False, Virus.BLACK: False, Virus.BLUE: False, Virus.RED: False},
+            one_quiet_night=False,
+            drawn_cards=0,
+            infections_steps=0,
+            last_build_research_station=City.ATLANTA,
+            virus_to_cure=None,
+            cities=create_cities_init_state(),
+            infection_deck=infection_deck,
+            infection_discard_pile=[],
+            player_deck=player_deck,
+            player_discard_pile=[],
+            previous_phase=Phase.SETUP,
+            phase=Phase.ACTIONS,
+            game_state=GameState.RUNNING,
+            phase_state=None,
+        )
+
         self._serve_player_cards(len(self.characters))
         self._prepare_player_deck(self.num_epidemic_cards)
-        self.player_discard_pile: List[Card] = []
 
-        self._add_neighbors_to_city_state()
-        self.game_state = GameState.RUNNING
-
-        # infection
+        # infection init
         self._init_infection_markers()
-        self.previous_phase = self.phase
-        self.phase = Phase.ACTIONS
+
         if self.epidemic_shuffle_seed is not None:
             self.random.seed(self.epidemic_shuffle_seed)
 
@@ -100,18 +139,19 @@ class State:
             self.infection_discard_pile.append(top_card)
 
     def infect_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
+        if color is None:
+            color = CITY_DATA[city].color
         outbreak = self._infect_city(city, color, times)
         if outbreak:
-            self._outbreak(city, self.cities[city].color)
+            self._outbreak(city, color)
         return outbreak
 
     def _infect_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
 
         outbreak_occurred = False
-        city_state = self.cities[city]
 
         if color is None:
-            color = city_state.color
+            color = CITY_DATA[city].color
 
         if self._is_city_protected_by_quarantine(city) or (
             self.cures[color]
@@ -142,7 +182,7 @@ class State:
     def _is_city_protected_by_quarantine(self, city) -> bool:
         if self.phase != Phase.SETUP and Character.QUARANTINE_SPECIALIST in self.players.keys():
             location = self._character_location(Character.QUARANTINE_SPECIALIST)
-            return city in self.cities[location].neighbors.union([location])
+            return city in CITY_DATA[location].neighbors.union([location])
         return False
 
     def treat_city(self, city: City, color: Virus = None, times: int = 1) -> bool:
@@ -209,14 +249,6 @@ class State:
         d.append(epidemic_cards.pop())
         self.random.shuffle(d)
         prepared_deck.extend(d)
-
-    def _add_neighbors_to_city_state(self):
-        [self.__resolve_connection(con) for con in CONNECTIONS]
-
-    def __resolve_connection(self, con):
-        start, end = con[0], con[1]
-        self.cities[start].add_neighbor(end)
-        self.cities[end].add_neighbor(start)
 
     def infection_rate(self) -> int:
         return INFECTIONS_RATES[self.infection_rate_marker]
@@ -288,7 +320,7 @@ class State:
             if self.outbreaks > 7:
                 self.game_state = GameState.LOST
                 return
-            neighbors = self.cities[city].neighbors
+            neighbors = CITY_DATA[city].neighbors
             for n in neighbors:
                 has_outbreak = self._infect_city(n, color, 1)
                 if has_outbreak:
@@ -312,3 +344,179 @@ class State:
     def play_card(self, player: Character, card: Card):
         if self.players[player].remove_card(card):
             self.player_discard_pile.append(card)
+
+    @property
+    def phase_state(self):
+        return self.internal_state.phase_state
+
+    @phase_state.setter
+    def phase_state(self, value):
+        self.internal_state.phase_state = value
+
+    @property
+    def previous_phase(self):
+        return self.internal_state.previous_phase
+
+    @previous_phase.setter
+    def previous_phase(self, value):
+        self.internal_state.previous_phase = value
+
+    @property
+    def phase(self):
+        return self.internal_state.phase
+
+    @phase.setter
+    def phase(self, value):
+        self.internal_state.phase = value
+
+    @property
+    def players(self):
+        return self.internal_state.players
+
+    @players.setter
+    def players(self, value):
+        self.internal_state.players = value
+
+    @property
+    def active_player(self):
+        return self.internal_state.active_player
+
+    @active_player.setter
+    def active_player(self, value):
+        self.internal_state.active_player = value
+
+    @property
+    def research_stations(self):
+        return self.internal_state.research_stations
+
+    @research_stations.setter
+    def research_stations(self, value):
+        self.internal_state.research_stations = value
+
+    @property
+    def outbreaks(self):
+        return self.internal_state.outbreaks
+
+    @outbreaks.setter
+    def outbreaks(self, value):
+        self.internal_state.outbreaks = value
+
+    @property
+    def infection_rate_marker(self):
+        return self.internal_state.infection_rate_marker
+
+    @infection_rate_marker.setter
+    def infection_rate_marker(self, value):
+        self.internal_state.infection_rate_marker = value
+
+    @property
+    def cubes(self):
+        return self.internal_state.cubes
+
+    @cubes.setter
+    def cubes(self, value):
+        self.internal_state.cubes = value
+
+    @property
+    def actions_left(self):
+        return self.internal_state.actions_left
+
+    @actions_left.setter
+    def actions_left(self, value):
+        self.internal_state.actions_left = value
+
+    @property
+    def cures(self):
+        return self.internal_state.cures
+
+    @cures.setter
+    def cures(self, value):
+        self.internal_state.cures = value
+
+    @property
+    def one_quiet_night(self):
+        return self.internal_state.one_quiet_night
+
+    @one_quiet_night.setter
+    def one_quiet_night(self, value):
+        self.internal_state.one_quiet_night = value
+
+    @property
+    def drawn_cards(self):
+        return self.internal_state.drawn_cards
+
+    @drawn_cards.setter
+    def drawn_cards(self, value):
+        self.internal_state.drawn_cards = value
+
+    @property
+    def infections_steps(self):
+        return self.internal_state.infections_steps
+
+    @infections_steps.setter
+    def infections_steps(self, value):
+        self.internal_state.infections_steps = value
+
+    @property
+    def last_build_research_station(self):
+        return self.internal_state.last_build_research_station
+
+    @last_build_research_station.setter
+    def last_build_research_station(self, value):
+        self.internal_state.last_build_research_station = value
+
+    @property
+    def virus_to_cure(self):
+        return self.internal_state.virus_to_cure
+
+    @virus_to_cure.setter
+    def virus_to_cure(self, value):
+        self.internal_state.virus_to_cure = value
+
+    @property
+    def cities(self):
+        return self.internal_state.cities
+
+    @cities.setter
+    def cities(self, value):
+        self.internal_state.cities = value
+
+    @property
+    def infection_deck(self):
+        return self.internal_state.infection_deck
+
+    @infection_deck.setter
+    def infection_deck(self, value):
+        self.internal_state.infection_deck = value
+
+    @property
+    def infection_discard_pile(self):
+        return self.internal_state.infection_discard_pile
+
+    @infection_discard_pile.setter
+    def infection_discard_pile(self, value):
+        self.internal_state.infection_discard_pile = value
+
+    @property
+    def player_deck(self):
+        return self.internal_state.player_deck
+
+    @player_deck.setter
+    def player_deck(self, value):
+        self.internal_state.player_deck = value
+
+    @property
+    def player_discard_pile(self):
+        return self.internal_state.player_discard_pile
+
+    @player_discard_pile.setter
+    def player_discard_pile(self, value):
+        self.internal_state.player_discard_pile = value
+
+    @property
+    def game_state(self):
+        return self.internal_state.game_state
+
+    @game_state.setter
+    def game_state(self, value):
+        self.internal_state.game_state = value

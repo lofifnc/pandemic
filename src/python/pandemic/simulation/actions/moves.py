@@ -11,7 +11,7 @@ from pandemic.simulation.model.actions import (
     Dispatch,
 )
 from pandemic.simulation.model.enums import Character
-from pandemic.simulation.state import State, City
+from pandemic.simulation.state import State, City, CITY_DATA
 
 
 def move_player(state: State, move: Movement):
@@ -19,7 +19,7 @@ def move_player(state: State, move: Movement):
     character = move.player
 
     if isinstance(move, DriveFerry):
-        assert destination_city in state.cities[state.get_player_current_city(character)].neighbors
+        assert destination_city in CITY_DATA[state.get_player_current_city(character)].neighbors
     if isinstance(move, DirectFlight):
         state.play_card(state.active_player, destination_city)
     if isinstance(move, CharterFlight):
@@ -64,7 +64,7 @@ def __possible_moves(state: State, character: Character, city_cards: Set[City]) 
     player_state = state.players[character]
     current_city = player_state.city
     # drives / ferries
-    neighbor_cities = state.cities[current_city].neighbors
+    neighbor_cities = CITY_DATA[current_city].neighbors
     moves = [DriveFerry(character, c) for c in neighbor_cities]
 
     # direct flights
