@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Set, Dict, List
+from typing import Dict
 
-from pandemic.simulation.model.city_id import City
 from pandemic.simulation.model.enums import Virus
 
 
@@ -21,9 +20,7 @@ class CityState:
             # outbreak!
             return True
 
-    def dec_infection(self, color: Virus = None) -> bool:
-        if color is None:
-            color = self.color
+    def dec_infection(self, color: Virus) -> bool:
 
         if self.viral_state[color] > 0:
             self.viral_state[color] -= 1

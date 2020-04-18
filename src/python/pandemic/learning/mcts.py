@@ -18,6 +18,9 @@ class MctsState:
     def get_possible_actions(self):
         raise NotImplementedError
 
+    def get_current_player(self):
+        raise NotImplementedError
+
 
 def random_policy(state: MctsState):
     while not state.is_terminal():
@@ -121,7 +124,7 @@ class Mcts:
 
     @staticmethod
     def __node_value(child, exploration_value, node):
-        return node.state.getCurrentPlayer() * child.total_reward / child.num_visits + exploration_value * math.sqrt(
+        return node.state.get_current_player() * child.total_reward / child.num_visits + exploration_value * math.sqrt(
             2 * math.log(node.num_visits) / child.num_visits
         )
 

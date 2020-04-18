@@ -1,5 +1,6 @@
 import math
 from collections import defaultdict
+from copy import deepcopy
 from typing import List, Dict, Tuple, Set
 
 import gym
@@ -12,28 +13,11 @@ from pandemic.simulation.simulation import Simulation, PLAYER_COUNT
 
 
 class PandemicEnvironment(gym.Env):
-    def reset(self):
-        # TODO: smarter reset
-        self._simulation.reset()
-        self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
-        self.observation_space = self._get_obs()
-        self._steps = 0
-        self._illegal_actions = 0
-        self.performed_actions_reward.clear()
-
-    def render(self, mode="human"):
-        [print("%s %s" % (a, r)) for a, r in self.performed_actions_reward]
-        print("steps: ", self._steps)
-        print("illegal actions: ", self._illegal_actions)
-        print("cures: ", self._simulation.state.cures)
-        print("outbreaks: ", self._simulation.state.outbreaks)
-        pass
-
     def __init__(
         self,
         num_epidemic_cards: int = 5,
         player_count: int = PLAYER_COUNT,
-        characters: Tuple[int] = tuple(),
+        characters: Set[int] = frozenset(),
         player_deck_shuffle_seed=None,
         infect_deck_shuffle_seed=None,
         epidemic_shuffle_seed=None,
@@ -52,8 +36,26 @@ class PandemicEnvironment(gym.Env):
         self._illegal_actions = 0
         self.performed_actions_reward = list()
 
+    def reset(self):
+        # TODO: smarter reset
+        self._simulation.reset()
+        self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
+        self.observation_space = self._get_obs()
+        self._steps = 0
+        self._illegal_actions = 0
+        self.performed_actions_reward.clear()
+
+    def render(self, mode="human"):
+        [print("%s %s" % (a, r)) for a, r in self.performed_actions_reward]
+        print("steps: ", self._steps)
+        print("illegal actions: ", self._illegal_actions)
+        print("cures: ", self._simulation.state.cures)
+        print("outbreaks: ", self._simulation.state.outbreaks)
+        pass
+
     def step(self, action: int):
         action_statement = self._action_lookup.get(action, None)
+        print(action_statement)
         if action_statement is None:
             self._illegal_actions += 1
             return self.observation_space, -1, False, {"steps": self._steps}
@@ -73,9 +75,17 @@ class PandemicEnvironment(gym.Env):
         # observation, reward, done, info
         return self.observation_space, reward, done, {"steps": self._steps}
 
-    def _get_reward(self) -> float:
+    def get_state_copy(self):
+        return deepcopy(self._simulation.state.internal_state)
+
+    def set_state(self, value):
+        self._simulation.state.internal_state = value
+        self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
+        self.observation_space = self._get_obs()
+
+    @staticmethod
+    def _get_reward(state) -> float:
         # try to come up with sensible reward
-        state = self._simulation.state
         # extremely basic reward each cure -> += 0.25
         # each card of same color for player uncured -> += 0.1
         # each turn -> += 0.001
@@ -83,12 +93,12 @@ class PandemicEnvironment(gym.Env):
             sum(pow(count, 0.01) - 1 for color, count in p.city_colors.items() if not state.cures[color] and count > 1)
             for p in state.players.values()
         )
-        cure_reward = sum(state.cures.values())
-        step_reward = self._steps * 0.001
+        cure_reward = sum(state.cures.values()) * 100
+        # step_reward = self._steps * 0.001
 
         # each outbreak -> -x^1.5/25
         outbreak_reward = math.pow(state.outbreaks, 1.5) / 25 * -1
-        reward = card_color_reward + cure_reward + step_reward + outbreak_reward
+        reward = card_color_reward + cure_reward + outbreak_reward
         return float(reward)
 
     @staticmethod

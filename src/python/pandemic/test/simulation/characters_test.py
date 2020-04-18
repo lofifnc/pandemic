@@ -1,5 +1,3 @@
-from typing import List
-
 from pandemic.simulation.model.actions import (
     ShareKnowledge,
     BuildResearchStation,

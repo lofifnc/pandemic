@@ -1,6 +1,3 @@
-from enum import Enum
-
-
 class Character:
     CONTINGENCY_PLANNER = 1
     DISPATCHER = 2

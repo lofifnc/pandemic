@@ -15,7 +15,7 @@ class Simulation:
         self,
         num_epidemic_cards: int = 5,
         player_count: int = PLAYER_COUNT,
-        characters: Set[int] = tuple(),
+        characters: Set[int] = frozenset(),
         player_deck_shuffle_seed=None,
         infect_deck_shuffle_seed=None,
         epidemic_shuffle_seed=None,
@@ -90,7 +90,7 @@ class Simulation:
         if too_many_cards:
             return possible_actions
 
-        if state.phase is Phase.ACTIONS:
+        if state.phase == Phase.ACTIONS:
             possible_actions.extend(
                 get_possible_move_actions(state, player) + get_possible_other_actions(state, player)
             )

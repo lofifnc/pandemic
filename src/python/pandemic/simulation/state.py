@@ -55,7 +55,7 @@ class State:
         self,
         num_epidemic_cards=5,
         player_count: int = PLAYER_COUNT,
-        characters: Tuple[int] = tuple(),
+        characters: Set[int] = frozenset(),
         player_deck_shuffle_seed=None,
         infect_deck_shuffle_seed=None,
         epidemic_shuffle_seed=None,
