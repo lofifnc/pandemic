@@ -94,11 +94,11 @@ class PandemicEnvironment(gym.Env):
             for p in state.players.values()
         )
         cure_reward = sum(state.cures.values()) * 100
-        # step_reward = self._steps * 0.001
+        step_reward = state.steps * 0.001
 
         # each outbreak -> -x^1.5/25
         outbreak_reward = math.pow(state.outbreaks, 1.5) / 25 * -1
-        reward = card_color_reward + cure_reward + outbreak_reward
+        reward = card_color_reward + cure_reward + outbreak_reward + step_reward
         return float(reward)
 
     @staticmethod

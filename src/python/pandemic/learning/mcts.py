@@ -79,7 +79,7 @@ class Mcts:
 
     def execute_round(self):
         node = self.select_node(self.root)
-        reward = self.rollout(node.state)
+        reward = random_policy(node.state)
         self.backpropogate(node, reward)
 
     def select_node(self, node):

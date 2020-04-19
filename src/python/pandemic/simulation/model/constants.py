@@ -15,6 +15,10 @@ class CityData:
     neighbors: Set[int]
     text_alignment: str = "left"
 
+    @property
+    def text_offset(self):
+        return 2 if self.text_alignment == "left" else -2
+
 
 NEIGHBORS = {
     1: {8, 26, 36, 15},
@@ -202,7 +206,7 @@ def create_cities_init_state() -> Dict[City, CityState]:
     }
 
 
-city_colors = {id: city.color for id, city in CITY_DATA.items()}
+CITY_COLORS = {id: city.color for id, city in CITY_DATA.items()}
 
 CONNECTIONS: (City, City) = [
     (City.SAN_FRANCISCO, City.TOKYO),

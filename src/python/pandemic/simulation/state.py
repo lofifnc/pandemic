@@ -49,6 +49,26 @@ class InternalState:
 
     game_state: int
 
+    steps: int
+
+    def report(self) -> str:
+        min_cubes = min(self.cubes, key=self.cubes.get)
+        return " ".join(
+            [
+                "active_player={active_player},",
+                "player_deck_size={player_deck_size},",
+                "infection_rate={infection_rate},",
+                "outbreaks={outbreaks},",
+                "min_cubes={min_cubes}",
+            ]
+        ).format(
+            active_player="%s:%s" % (self.active_player, self.actions_left),
+            player_deck_size=len(self.player_deck),
+            infection_rate=self.infection_rate_marker,
+            outbreaks=self.outbreaks,
+            min_cubes="%s:%s" % (min_cubes, self.cubes[min_cubes]),
+        )
+
 
 class State:
     def __init__(
@@ -75,7 +95,7 @@ class State:
 
         players = {c: PlayerState() for c in self.characters}
 
-        infection_deck: List[City] = list(city_colors.keys())
+        infection_deck: List[City] = list(CITY_COLORS.keys())
 
         if self.infect_deck_shuffle_seed is not None:
             self.random.seed(self.infect_deck_shuffle_seed)
@@ -84,7 +104,7 @@ class State:
         if self.infect_deck_shuffle_seed is not None:
             self.random.seed(self.infect_deck_shuffle_seed)
 
-        player_deck: List[Card] = list(city_colors.keys()) + list(EventCard.__members__)
+        player_deck: List[Card] = list(CITY_COLORS.keys()) + list(EventCard.__members__)
         self.random.shuffle(player_deck)
 
         self.internal_state = InternalState(
@@ -115,6 +135,7 @@ class State:
             phase=Phase.ACTIONS,
             game_state=GameState.RUNNING,
             phase_state=None,
+            steps=0,
         )
 
         self._serve_player_cards(len(self.characters))
@@ -252,24 +273,6 @@ class State:
 
     def infection_rate(self) -> int:
         return INFECTIONS_RATES[self.infection_rate_marker]
-
-    def report(self) -> str:
-        min_cubes = min(self.cubes, key=self.cubes.get)
-        return " ".join(
-            [
-                "active_player={active_player},",
-                "player_deck_size={player_deck_size},",
-                "infection_rate={infection_rate},",
-                "outbreaks={outbreaks},",
-                "min_cubes={min_cubes}",
-            ]
-        ).format(
-            active_player="%s:%s" % (self.active_player, self.actions_left),
-            player_deck_size=len(self.player_deck),
-            infection_rate=self.infection_rate(),
-            outbreaks=self.outbreaks,
-            min_cubes="%s:%s" % (min_cubes, self.cubes[min_cubes]),
-        )
 
     def _epidemic_1st_part(self):
         self.phase = Phase.EPIDEMIC

@@ -53,7 +53,7 @@ class PlayerState:
     @contingency_planner_card.setter
     def contingency_planner_card(self, value: Card):
         if Card.card_type(value) == Card.CITY:
-            self._city_colors[constants.city_colors[value]] += 1
+            self._city_colors[constants.CITY_COLORS[value]] += 1
             self._contingency_planner_city_card = value
             self._contingency_planner_event_card = None
         else:
@@ -65,7 +65,7 @@ class PlayerState:
             self._event_cards.add(card)
             self._num_cards += 1
         elif Card.card_type(card) == Card.CITY:
-            self._city_colors[constants.city_colors[card]] += 1
+            self._city_colors[constants.CITY_COLORS[card]] += 1
             self._city_cards.add(card)
             self._num_cards += 1
 
@@ -85,12 +85,12 @@ class PlayerState:
             try:
                 self._city_cards.remove(card)
                 self._num_cards -= 1
-                self._city_colors[constants.city_colors[card]] -= 1
+                self._city_colors[constants.CITY_COLORS[card]] -= 1
                 return True
             except KeyError:
                 if card == self._contingency_planner_city_card:
                     self._contingency_planner_city_card = None
-                    self._city_colors[constants.city_colors[card]] -= 1
+                    self._city_colors[constants.CITY_COLORS[card]] -= 1
                     return False
         else:
             try:

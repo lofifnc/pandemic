@@ -2,9 +2,7 @@ from copy import deepcopy
 
 from pandemic.learning.environment import PandemicEnvironment
 from pandemic.learning.mcts import MctsState
-import numpy as np
-from pandemic.learning.mcts import Mcts
-from pandemic.simulation.model.enums import Character, GameState
+from pandemic.simulation.model.enums import GameState
 from pandemic.simulation.simulation import Simulation
 
 
@@ -14,15 +12,7 @@ class PandemicMctsState(MctsState):
     def get_current_player(self):
         return 1
 
-    def __init__(
-            self,
-            env: Simulation,
-            state,
-            possible_actions=None,
-            done=False,
-            reward=False,
-            phase=1,
-    ):
+    def __init__(self, env: Simulation, state, possible_actions=None, done=False, reward=False, phase=1):
         self.env: Simulation = env
         self.state = state
         self._possible_actions = env.get_possible_actions() if possible_actions is None else possible_actions
@@ -42,16 +32,16 @@ class PandemicMctsState(MctsState):
             self.env.step(None)
         else:
             self.env.step(action)
-        actions = self.action_list(env.get_possible_actions())
+        actions = self.action_list(self.env.get_possible_actions())
         done = self.env.state.game_state != GameState.RUNNING
         reward = False
         if self.env.state.game_state == GameState.WIN:
-            reward = PandemicEnvironment._get_reward(env.state.internal_state)
+            reward = PandemicEnvironment._get_reward(self.env.state.internal_state)
         elif self.env.state.game_state == GameState.LOST:
-            calc_reward = PandemicEnvironment._get_reward(env.state.internal_state)
-            reward = calc_reward if calc_reward > -1 else -1
+            calc_reward = PandemicEnvironment._get_reward(self.env.state.internal_state)
+            reward = calc_reward if calc_reward else -1
 
-        if(any(self.env.state.cures.values())):
+        if any(self.env.state.cures.values()):
             print("found cure !__@_#_@_#_!__@_#arstarst_#)#)#)")
         assert self.state != new_state
         return PandemicMctsState(self.env, self.env.state.internal_state, actions, done, reward, self.env.state.phase)
@@ -73,20 +63,21 @@ class PandemicMctsState(MctsState):
             return actions
 
 
-env = Simulation(
-    characters={Character.RESEARCHER, Character.CONTINGENCY_PLANNER},
-    player_deck_shuffle_seed=5,
-    infect_deck_shuffle_seed=10,
-    epidemic_shuffle_seed=12,
-)
-
-env._get_obs = lambda: []
-initial_state = PandemicMctsState(env, env.state.internal_state)
-mcts = Mcts(time_limit=60000)
-next_state = initial_state
-while not next_state.is_terminal():
-    bestAction = mcts.search(initial_state=next_state)
-    print(next_state._possible_actions[bestAction])
-    next_state = next_state.take_action(bestAction)
-print(next_state.get_reward())
-
+#
+# env = Simulation(
+#     characters={Character.RESEARCHER, Character.CONTINGENCY_PLANNER},
+#     player_deck_shuffle_seed=5,
+#     infect_deck_shuffle_seed=10,
+#     epidemic_shuffle_seed=12,
+# )
+#
+# initial_state = PandemicMctsState(env, env.state.internal_state)
+# mcts = Mcts(time_limit=5000)
+# next_state = initial_state
+# viz = Visualization(next_state.state)
+# while not next_state.is_terminal():
+#     bestAction = mcts.search(initial_state=next_state)
+#     print(next_state._possible_actions[bestAction])
+#     next_state = next_state.take_action(bestAction)
+#     viz = Visualization(next_state.state)
+# print(next_state.get_reward())

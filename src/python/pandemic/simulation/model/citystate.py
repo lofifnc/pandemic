@@ -41,13 +41,6 @@ class CityState:
             state += f"ye{self.viral_state[Virus.YELLOW]} "
         return state
 
-    # @property
-    # def text_offset(self):
-    #     return 2 if self.text_alignment == "left" else -2
-    #
-    # def __str__(self):
-    #     return f"{self.name} {self.lat}:{self.lon}"
-
     def has_research_station(self) -> bool:
         return self.research_station
 

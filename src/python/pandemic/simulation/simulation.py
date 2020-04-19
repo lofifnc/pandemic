@@ -51,6 +51,7 @@ class Simulation:
             _state.infections(action)
         elif _state.phase == Phase.EPIDEMIC:
             _state.epidemic_2nd_part()
+        _state.internal_state.steps += 1
 
     @staticmethod
     def actions(state: State, action: ActionInterface):
