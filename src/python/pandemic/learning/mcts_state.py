@@ -1,4 +1,6 @@
 from copy import deepcopy
+from copyreg import pickle
+from dataclasses import replace
 
 from pandemic.learning.environment import PandemicEnvironment
 from pandemic.learning.mcts import MctsState
