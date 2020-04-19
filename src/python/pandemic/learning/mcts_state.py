@@ -1,5 +1,5 @@
 from copy import deepcopy
-from copyreg import pickle
+import pickle
 from dataclasses import replace
 
 from pandemic.learning.environment import PandemicEnvironment
@@ -16,7 +16,7 @@ class PandemicMctsState(MctsState):
 
     def __init__(self, env: Simulation, state, possible_actions=None, done=False, reward=False, phase=1):
         self.env: Simulation = env
-        self.state = state
+        self.state = pickle.dumps(state)
         self._possible_actions = env.get_possible_actions() if possible_actions is None else possible_actions
         self._is_terminal = done
         self._reward = reward
@@ -27,7 +27,7 @@ class PandemicMctsState(MctsState):
 
     def take_action(self, action):
         action = self._possible_actions[action]
-        new_state = deepcopy(self.state)
+        new_state = pickle.loads(self.state)
         self.env.state.internal_state = new_state
         assert action in self._possible_actions
         if action == "Wait":

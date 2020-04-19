@@ -23,6 +23,7 @@ class TreeSearch:
         self.visited_nodes = 0
         self.discovered_final_states = 0
         self.step_limit = step_limit
+        self.max_reward = -100
 
     def search(self, initial_state: MctsState):
         self.root_node = WalkNode(dict(), initial_state, None)
@@ -40,11 +41,12 @@ class TreeSearch:
             self.do_something()
             steps += 1
             if(steps % 1000 == 0):
-                print(self.discovered_nodes, self.visited_nodes, self.discovered_final_states)
+                print(self.discovered_nodes, self.visited_nodes, self.discovered_final_states, self.max_reward)
 
     def do_something(self):
         if self.current_node.state.is_terminal():
             self.discovered_final_states += 1
+            self.max_reward = max(self.max_reward, self.current_node.state.get_reward())
             if self.current_node.state.get_reward() > 0:
                 print(self.current_node.state.get_reward())
             self.current_node = self.current_node.parent
