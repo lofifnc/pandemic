@@ -17,13 +17,14 @@ class WalkNode:
 
 
 class TreeSearch:
-    def __init__(self, step_limit=None):
+    def __init__(self, step_limit=None, report_steps=1000):
         self.root_node: WalkNode
         self.discovered_nodes = 0
         self.visited_nodes = 0
         self.discovered_final_states = 0
         self.step_limit = step_limit
         self.max_reward = -100
+        self.report_steps = report_steps
 
     def search(self, initial_state: MctsState):
         self.root_node = WalkNode(dict(), initial_state, None)
@@ -40,7 +41,7 @@ class TreeSearch:
         while condition(steps):
             self.do_something()
             steps += 1
-            if(steps % 1000 == 0):
+            if(steps % 10000 == 0):
                 print(self.discovered_nodes, self.visited_nodes, self.discovered_final_states, self.max_reward)
 
     def do_something(self):
