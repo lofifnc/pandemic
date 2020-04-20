@@ -36,10 +36,9 @@ class PandemicMctsState(MctsState):
         done = self.env.state.game_state != GameState.RUNNING
         reward = False
         if self.env.state.game_state == GameState.WIN:
-            reward = PandemicEnvironment._get_reward(self.env.state.internal_state)
+            reward = 1
         elif self.env.state.game_state == GameState.LOST:
-            calc_reward = PandemicEnvironment._get_reward(self.env.state.internal_state)
-            reward = calc_reward if calc_reward else -1
+            reward = -1
 
         if any(self.env.state.cures.values()):
             print("found cure !__@_#_@_#_!__@_#arstarst_#)#)#)")

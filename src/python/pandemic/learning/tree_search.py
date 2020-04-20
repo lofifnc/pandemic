@@ -15,30 +15,32 @@ class WalkNode:
 
 class TreeSearch:
     def __init__(self, step_limit=None, report_steps=1000):
-        self.root_node: WalkNode
+        self.root_node: WalkNode = None
         self.discovered_nodes = 0
         self.visited_nodes = 0
         self.discovered_final_states = 0
         self.step_limit = step_limit
         self.max_reward = -100
         self.report_steps = report_steps
+        self.steps = 0
 
     def search(self, initial_state: MctsState):
-        self.root_node = WalkNode(dict(), initial_state, None)
+        self.root_node = WalkNode(dict(), initial_state, None) if self.root_node is None else self.root_node
         self.current_node = self.root_node
-        self.walk()
+        return self.walk()
 
     def walk(self):
-        steps = 0
-        if self.step_limit:
-            condition = lambda s: s < self.step_limit
-        else:
-            condition = lambda s: True
+        # if self.step_limit:
+        #     condition = lambda s: s < self.step_limit
+        # else:
+        #     condition = lambda s: True
 
-        while condition(steps):
-            self.do_something()
-            steps += 1
-            if steps % 10000 == 0:
+        while True:
+            reward = self.do_something()
+            if reward:
+                break
+            self.steps += 1
+            if self.steps % 10000 == 0:
                 print(
                     self.discovered_nodes,
                     self.visited_nodes,
@@ -46,14 +48,17 @@ class TreeSearch:
                     self.max_reward,
                     self.root_node.visited_children,
                 )
+        return reward
 
     def do_something(self):
         if self.current_node.state.is_terminal():
             self.discovered_final_states += 1
-            self.max_reward = max(self.max_reward, self.current_node.state.get_reward())
+            reward = self.current_node.state.get_reward()
+            self.max_reward = max(self.max_reward, reward)
             if self.current_node.state.get_reward() > 0:
                 print(self.current_node.state.get_reward())
             self.current_node = self.current_node.parent
+            return reward
         elif self.current_node.explored:
             self.current_node = self.current_node.parent
         else:
@@ -78,3 +83,5 @@ class TreeSearch:
                 self.current_node.children = dict()
             self.current_node = next_node
             self.visited_nodes += 1
+
+

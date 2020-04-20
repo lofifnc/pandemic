@@ -20,7 +20,9 @@ tree_search = TreeSearch(step_limit=40000)
 
 pr = cProfile.Profile()
 pr.enable()
-tree_search.search(initial_state)
+for _ in range(1, 20000):
+    tree_search.search(initial_state=initial_state)
+
 
 pr.disable()
 
@@ -29,3 +31,5 @@ sortby = pstats.SortKey.CUMULATIVE
 ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
 ps.print_stats()
 print(s.getvalue())
+
+

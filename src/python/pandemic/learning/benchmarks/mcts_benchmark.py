@@ -14,7 +14,7 @@ env = Simulation(
 initial_state = PandemicMctsState(env, env.state.internal_state)
 mcts = Mcts(time_limit=5000)
 next_state = initial_state
-# viz = Visualization(next_state.state)
+viz = Visualization(env.state.internal_state)
 while not next_state.is_terminal():
     bestAction = mcts.search(initial_state=next_state)
     print(next_state._possible_actions[bestAction])
