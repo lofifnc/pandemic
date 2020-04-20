@@ -8,7 +8,6 @@ from pandemic.simulation.model.enums import Character
 from pandemic.simulation.simulation import Simulation
 
 
-
 env = Simulation(
     characters={Character.RESEARCHER, Character.CONTINGENCY_PLANNER},
     player_deck_shuffle_seed=5,
@@ -17,7 +16,7 @@ env = Simulation(
 )
 
 initial_state = PandemicMctsState(env, env.state.internal_state)
-tree_search = TreeSearch(step_limit=5000)
+tree_search = TreeSearch(step_limit=40000)
 
 pr = cProfile.Profile()
 pr.enable()

@@ -2,9 +2,6 @@ from dataclasses import dataclass
 from typing import Dict, Any
 
 from pandemic.learning.mcts import MctsState
-from pandemic.learning.mcts_state import PandemicMctsState
-from pandemic.simulation.model.enums import Character
-from pandemic.simulation.simulation import Simulation
 
 
 @dataclass
@@ -41,8 +38,14 @@ class TreeSearch:
         while condition(steps):
             self.do_something()
             steps += 1
-            if(steps % 10000 == 0):
-                print(self.discovered_nodes, self.visited_nodes, self.discovered_final_states, self.max_reward)
+            if steps % 10000 == 0:
+                print(
+                    self.discovered_nodes,
+                    self.visited_nodes,
+                    self.discovered_final_states,
+                    self.max_reward,
+                    self.root_node.visited_children,
+                )
 
     def do_something(self):
         if self.current_node.state.is_terminal():
