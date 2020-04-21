@@ -2,6 +2,7 @@ import pickle
 
 from pandemic.learning.environment import PandemicEnvironment
 from pandemic.learning.mcts import MctsState
+from pandemic.simulation.model.actions import DirectFlight
 from pandemic.simulation.model.enums import GameState
 from pandemic.simulation.simulation import Simulation
 
@@ -12,13 +13,24 @@ class PandemicMctsState(MctsState):
     def get_current_player(self):
         return 1
 
-    def __init__(self, env: Simulation, state, possible_actions=None, done=False, reward=False, phase=1):
+    def __init__(
+        self,
+        env: Simulation,
+        state,
+        possible_actions=None,
+        done=False,
+        reward=False,
+        phase=1,
+        action_filter=lambda x: True,
+    ):
         self.env: Simulation = env
         self.state = pickle.dumps(state)
-        self._possible_actions = env.get_possible_actions() if possible_actions is None else possible_actions
+        self.action_filter = action_filter
+        self._possible_actions = self.action_list(env.get_possible_actions()) if possible_actions is None else possible_actions
         self._is_terminal = done
         self._reward = reward
         self.phase = phase
+
 
     def is_terminal(self) -> bool:
         return self._is_terminal
@@ -43,7 +55,9 @@ class PandemicMctsState(MctsState):
         # if any(self.env.state.cures.values()):
         #     print("found cure !__@_#_@_#_!__@_#arstarst_#)#)#) v", self.env.state.cures)
         assert self.state != new_state
-        return PandemicMctsState(self.env, self.env.state.internal_state, actions, done, reward, self.env.state.phase)
+        return PandemicMctsState(
+            self.env, self.env.state.internal_state, actions, done, reward, self.env.state.phase, self.action_filter
+        )
 
     def get_reward(self):
         if self.is_terminal():
@@ -54,9 +68,12 @@ class PandemicMctsState(MctsState):
     def get_possible_actions(self):
         return range(0, len(self._possible_actions))
 
-    @staticmethod
-    def action_list(actions):
+    def action_list(self, actions):
         if actions is None or actions == []:
             return ["Wait"]
         else:
+            filtered_actions = list(filter(self.action_filter, actions))
+            actions = filtered_actions if filtered_actions else actions
+            if any(filter(lambda a: isinstance(a, DirectFlight), actions)):
+                print("hey no!")
             return actions

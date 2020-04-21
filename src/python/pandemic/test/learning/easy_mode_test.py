@@ -40,7 +40,7 @@ def test_easy_mode_play_trough():
     env.step(None)
 
     env.step(DiscoverCure(target_virus=1))
-    env.get_possible_actions( )
+    env.get_possible_actions()
     env.step(ChooseCard(player=5, card=1))
     env.step(ChooseCard(player=5, card=38))
     env.step(ChooseCard(player=5, card=10))
@@ -95,4 +95,3 @@ def test_easy_mode_play_trough():
     env.step(ChooseCard(player=5, card=8))
     env.step(ChooseCard(player=5, card=9))
     assert env.state.game_state == GameState.WIN
-

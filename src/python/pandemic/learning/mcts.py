@@ -4,6 +4,8 @@ import time
 import math
 import random
 
+from pandemic.simulation.model.actions import DriveFerry, DiscoverCure, ChooseCard, DirectFlight
+
 
 class MctsState:
     def is_terminal(self) -> bool:
@@ -28,6 +30,29 @@ def random_policy(state: MctsState):
             action = random.choice(state.get_possible_actions())
         except IndexError:
             raise Exception("Non-terminal state has no possible actions: " + str(state))
+        state = state.take_action(action)
+    return state.get_reward()
+
+
+def random_filtered_action_policy(state: MctsState):
+    while not state.is_terminal():
+        try:
+            actions = [
+                idx
+                for idx, action in enumerate(state._possible_actions)
+                if isinstance(action, DriveFerry)
+                or isinstance(action, DiscoverCure)
+                or isinstance(action, ChooseCard)
+                or action == "Wait"
+            ]
+            if not actions:
+                action = random.choice(state.get_possible_actions())
+            else:
+                action = random.choice(actions)
+        except IndexError:
+            raise Exception("Non-terminal state has no possible actions: " + str(state))
+        if isinstance(state._possible_actions[action], DirectFlight):
+            print(state._possible_actions[action])
         state = state.take_action(action)
     return state.get_reward()
 
@@ -79,7 +104,7 @@ class Mcts:
 
     def execute_round(self):
         node = self.select_node(self.root)
-        reward = random_policy(node.state)
+        reward = self.rollout(node.state)
         self.backpropogate(node, reward)
 
     def select_node(self, node):

@@ -20,6 +20,7 @@ def swap_elements(list, x, y):
     index2 = list.index(y)
     list[index1], list[index2] = list[index2], list[index1]
 
+
 _env = Simulation(
     characters={Character.QUARANTINE_SPECIALIST, Character.SCIENTIST},
     num_epidemic_cards=4,

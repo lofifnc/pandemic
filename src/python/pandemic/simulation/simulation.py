@@ -11,6 +11,7 @@ from pandemic.simulation.state import State
 
 print("version ", 2.0)
 
+
 class Simulation:
     def __init__(
         self,

@@ -83,5 +83,3 @@ class TreeSearch:
                 self.current_node.children = dict()
             self.current_node = next_node
             self.visited_nodes += 1
-
-
