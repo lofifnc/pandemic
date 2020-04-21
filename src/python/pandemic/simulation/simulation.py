@@ -9,6 +9,7 @@ from pandemic.simulation.model.enums import Character, GameState
 from pandemic.simulation.model.phases import ChooseCardsPhase, Phase
 from pandemic.simulation.state import State
 
+print("version ", 2.0)
 
 class Simulation:
     def __init__(
