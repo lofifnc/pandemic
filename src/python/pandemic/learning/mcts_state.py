@@ -74,7 +74,4 @@ class PandemicMctsState(MctsState):
             return ["Wait"]
         else:
             filtered_actions = list(filter(self.action_filter, actions))
-            actions = filtered_actions if filtered_actions else actions
-            if any(filter(lambda a: isinstance(a, DirectFlight), actions)):
-                print("hey no!")
-            return actions
+            return filtered_actions if filtered_actions else actions
