@@ -20,7 +20,7 @@ action_filter = (
 env.state.internal_state = easy_state
 print(easy_state.active_player)
 initial_state = PandemicMctsState(env, easy_state)
-mcts = SpMcts(initial_state, time_limit=30000, exploration_constant=0.05, D=0.1)
+mcts = SpMcts(initial_state, time_limit=30000, exploration_constant=0.06, D=0.5)
 next_state = initial_state
 # viz = Visualization(env.state.internal_state)
 while not next_state.is_terminal():

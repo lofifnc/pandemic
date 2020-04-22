@@ -5,6 +5,7 @@ import math
 import random
 
 from pandemic.simulation.model.actions import DriveFerry, DiscoverCure, ChooseCard, DirectFlight
+from pandemic.simulation.model.enums import Virus
 
 
 class SpMctsState:
@@ -52,6 +53,30 @@ def random_filtered_action_policy(state: SpMctsState):
             print(state._possible_actions[action])
         state = state.take_action(action)
     return state.get_reward()
+#
+# def tabu_filter(color, action):
+#     if isinstance(action, DirectFlight):
+#         action.player
+#
+# def tabu_random(state: SpMctsState):
+#     color = random.choice(Virus.__colors.keys())
+#     while not state.is_terminal():
+#         try:
+#             actions = [
+#                 idx
+#                 for idx, action in enumerate(state._possible_actions)
+#                 if
+#             ]
+#             if not actions:
+#                 action = random.choice(state.get_possible_actions())
+#             else:
+#                 action = random.choice(actions)
+#         except IndexError:
+#             raise Exception("Non-terminal state has no possible actions: " + str(state))
+#         if isinstance(state._possible_actions[action], DirectFlight):
+#             print(state._possible_actions[action])
+#         state = state.take_action(action)
+#     return state.get_reward()
 
 
 class TreeNode:
@@ -110,6 +135,9 @@ class SpMcts:
         return self.root.state
 
     def select_node(self, node):
+        if node.num_visits < 10:
+            return node
+
         while not node.is_terminal:
             if node.is_fully_expanded:
                 node = self.get_best_child(node, self.exploration_constant, self.D)
@@ -154,7 +182,7 @@ class SpMcts:
     def __node_value(child, exploration_value, node, D):
         return node.state.get_current_player() * child.total_reward / child.num_visits + exploration_value * math.sqrt(
             2 * math.log(node.num_visits) / child.num_visits
-        ) + math.sqrt((child.squared_reward - child.num_visits * math.pow(child.squared_reward / child.num_visits, 2) + D) / child.num_visits)
+        ) + math.sqrt((child.squared_reward - child.num_visits * math.pow(child.total_reward / child.num_visits, 2) + D) / child.num_visits)
 
     @staticmethod
     def get_action(root, bestChild):
