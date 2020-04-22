@@ -122,7 +122,7 @@ class SpMcts:
         else:
             [self.execute_round() for i in range(self.search_limit)]
 
-        best_child = self.get_best_child(self.root, 0, self.D)
+        best_child = self.get_best_child(self.root, 0, 0)
         return self.get_action(self.root, best_child)
 
     def execute_round(self):
@@ -130,9 +130,10 @@ class SpMcts:
         reward = self.rollout(node.state)
         self.backpropogate(node, reward)
 
-    def step(self, action):
+    def get_next_action(self, action):
         self.root = self.root.children[action]
-        return self.root.state
+        best_child = self.get_best_child(self.root, 0, 0)
+        return self.get_action(self.root, best_child)
 
     def select_node(self, node):
         if node.num_visits < 10:
