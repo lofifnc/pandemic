@@ -20,12 +20,12 @@ action_filter = (
 env.state.internal_state = easy_state
 print(easy_state.active_player)
 initial_state = PandemicMctsState(env, easy_state)
-mcts = Mcts(time_limit=15000, exploration_constant=0.1)
+mcts = SpMcts(initial_state, time_limit=30000, exploration_constant=0.05, D=0.1)
 next_state = initial_state
 # viz = Visualization(env.state.internal_state)
 while not next_state.is_terminal():
-    bestAction = mcts.search(initial_state=next_state)
+    bestAction = mcts.search()
     print(next_state._possible_actions[bestAction])
-    next_state = next_state.take_action(bestAction)
+    next_state = mcts.step(bestAction)
     # viz = Visualization(next_state.state)
 print(next_state.get_reward())

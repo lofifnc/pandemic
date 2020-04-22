@@ -7,7 +7,7 @@ import random
 from pandemic.simulation.model.actions import DriveFerry, DiscoverCure, ChooseCard, DirectFlight
 
 
-class MctsState:
+class SpMctsState:
     def is_terminal(self) -> bool:
         raise NotImplementedError
 
@@ -20,11 +20,8 @@ class MctsState:
     def get_possible_actions(self):
         raise NotImplementedError
 
-    def get_current_player(self):
-        raise NotImplementedError
 
-
-def random_policy(state: MctsState):
+def random_policy(state: SpMctsState):
     while not state.is_terminal():
         try:
             action = random.choice(state.get_possible_actions())
@@ -34,7 +31,7 @@ def random_policy(state: MctsState):
     return state.get_reward()
 
 
-def random_filtered_action_policy(state: MctsState):
+def random_filtered_action_policy(state: SpMctsState):
     while not state.is_terminal():
         try:
             actions = [
@@ -65,12 +62,13 @@ class TreeNode:
         self.parent = parent
         self.num_visits = 0
         self.total_reward = 0
+        self.squared_reward = 0
         self.children = {}
 
 
-class Mcts:
+class SpMcts:
     def __init__(
-        self, time_limit=None, iteration_limit=None, exploration_constant=1 / math.sqrt(2), rollout_policy=random_policy
+        self, initial_state: SpMctsState, time_limit=None, iteration_limit=None, exploration_constant=1 / math.sqrt(2), rollout_policy=random_policy, D = 0.1
     ):
         if time_limit is not None:
             if iteration_limit is not None:
@@ -88,10 +86,10 @@ class Mcts:
             self.limit_type = "iterations"
         self.exploration_constant = exploration_constant
         self.rollout = rollout_policy
+        self.D = D
+        self.root: TreeNode = TreeNode(initial_state, None)
 
-    def search(self, initial_state):
-        self.root = TreeNode(initial_state, None)
-
+    def search(self):
         if self.limit_type == "time":
             time_limit = time.time() + self.time_limit / 1000
             while time.time() < time_limit:
@@ -99,7 +97,7 @@ class Mcts:
         else:
             [self.execute_round() for i in range(self.search_limit)]
 
-        best_child = self.get_best_child(self.root, 0)
+        best_child = self.get_best_child(self.root, 0, self.D)
         return self.get_action(self.root, best_child)
 
     def execute_round(self):
@@ -107,10 +105,14 @@ class Mcts:
         reward = self.rollout(node.state)
         self.backpropogate(node, reward)
 
+    def step(self, action):
+        self.root = self.root.children[action]
+        return self.root.state
+
     def select_node(self, node):
         while not node.is_terminal:
             if node.is_fully_expanded:
-                node = self.get_best_child(node, self.exploration_constant)
+                node = self.get_best_child(node, self.exploration_constant, self.D)
             else:
                 return self.expand(node)
         return node
@@ -132,16 +134,15 @@ class Mcts:
         while node is not None:
             node.num_visits += 1
             node.total_reward += reward
+            node.squared_reward += math.pow(reward, 2)
             node = node.parent
 
     @staticmethod
-    def get_best_child(node, exploration_value):
+    def get_best_child(node, exploration_value, D):
         best_value = float("-inf")
         best_nodes = []
-        nodes_values = {node.state._possible_actions[a]: Mcts.__node_value(c, exploration_value, node) for a, c in node.children.items()}
-
         for child in node.children.values():
-            node_value = Mcts.__node_value(child, exploration_value, node)
+            node_value = SpMcts.__node_value(child, exploration_value, node, D)
             if node_value > best_value:
                 best_value = node_value
                 best_nodes = [child]
@@ -150,10 +151,10 @@ class Mcts:
         return random.choice(best_nodes)
 
     @staticmethod
-    def __node_value(child, exploration_value, node):
+    def __node_value(child, exploration_value, node, D):
         return node.state.get_current_player() * child.total_reward / child.num_visits + exploration_value * math.sqrt(
             2 * math.log(node.num_visits) / child.num_visits
-        )
+        ) + math.sqrt((child.squared_reward - child.num_visits * math.pow(child.squared_reward / child.num_visits, 2) + D) / child.num_visits)
 
     @staticmethod
     def get_action(root, bestChild):
