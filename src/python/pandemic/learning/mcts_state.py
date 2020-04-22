@@ -51,7 +51,7 @@ class PandemicMctsState(MctsState):
             reward = 4
         elif self.env.state.game_state == GameState.LOST:
             cure_reward = sum(self.env.state.cures.values()) * 1
-            reward = cure_reward if cure_reward > 0 else -1
+            reward = cure_reward if cure_reward > 0 else 0
 
         # if any(self.env.state.cures.values()):
         #     print("found cure !__@_#_@_#_!__@_#arstarst_#)#)#) v", self.env.state.cures)

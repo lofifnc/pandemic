@@ -115,10 +115,14 @@ class SpMcts:
         self.root: TreeNode = TreeNode(initial_state, None)
 
     def search(self):
+        executions = 0
         if self.limit_type == "time":
             time_limit = time.time() + self.time_limit / 1000
             while time.time() < time_limit:
                 self.execute_round()
+                executions += 1
+                if executions % 1000 == 0:
+                    print("running ", executions)
         else:
             [self.execute_round() for i in range(self.search_limit)]
 
