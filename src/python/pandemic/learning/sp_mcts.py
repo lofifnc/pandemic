@@ -113,6 +113,7 @@ class SpMcts:
         self.rollout = rollout_policy
         self.D = D
         self.root: TreeNode = TreeNode(initial_state, None)
+        self.max_reward = float("-inf")
 
     def search(self):
         executions = 0
@@ -122,7 +123,7 @@ class SpMcts:
                 self.execute_round()
                 executions += 1
                 if executions % 1000 == 0:
-                    print("running ", executions)
+                    print("running ", executions, self.max_reward)
         else:
             [self.execute_round() for i in range(self.search_limit)]
 
@@ -132,6 +133,8 @@ class SpMcts:
     def execute_round(self):
         node = self.select_node(self.root)
         reward = self.rollout(node.state)
+        if reward > self.max_reward:
+            self.max_reward = reward
         self.backpropogate(node, reward)
 
     def get_next_action(self, action):
