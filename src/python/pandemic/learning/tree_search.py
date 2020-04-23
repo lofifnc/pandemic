@@ -26,6 +26,7 @@ class TreeSearch:
     def __init__(
         self, step_limit=None, report_steps=1000, time_limit=None, exploration_constant=1 / math.sqrt(2), D=0.1, select_threshold=1000, next_threshold=100
     ):
+        self.max_depth = 0
         self.next_threshold = next_threshold
         self.D = D
         self.exploration_constant = exploration_constant
@@ -58,6 +59,7 @@ class TreeSearch:
                     self.discovered_final_states,
                     self.max_reward,
                     self.root_node.visited_children,
+                    self.max_depth
                 )
 
     def walk(self):
@@ -90,12 +92,10 @@ class TreeSearch:
                     self.discovered_nodes += len(current_node.state.get_possible_actions())
                     reward = current_node.state.get_reward()
                     if reward and current_reward != reward:
-                        print("reward", reward)
                         current_reward = reward
                         reward = reward + 1 / current_node.state.steps
-                        print("reward_steps", reward)
                         self.max_reward = max(self.max_reward, reward)
-                        self.backpropogate(current_node, reward, self.current_node.state.steps)
+                        self.backpropogate(current_node, reward, current_node.state.steps)
 
                 try:
                     action = random.choice(current_node.state.get_possible_actions())
@@ -117,7 +117,8 @@ class TreeSearch:
         self.discovered_final_states += 1
         reward = current_node.state.get_reward()
         self.max_reward = max(self.max_reward, reward)
-        self.backpropogate(current_node, reward, self.current_node.state.steps)
+        self.backpropogate(current_node, reward, current_node.state.steps)
+        self.max_depth = max(self.max_depth, current_node.state.steps)
         return reward
 
     def print_best_solution(self):
