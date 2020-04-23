@@ -32,7 +32,8 @@ def random_policy(state: SpMctsState):
         state = state.take_action(action)
     return state.get_reward(), state.steps
 
-def random_filtered_action_policy(state: SpMctsState):
+
+def random_filtered_action_policy(state: SpMctsState, rand):
     while not state.is_terminal():
         try:
             actions = [
@@ -44,9 +45,9 @@ def random_filtered_action_policy(state: SpMctsState):
                 or action == "Wait"
             ]
             if not actions:
-                action = random.choice(state.get_possible_actions())
+                action = rand.choice(state.get_possible_actions())
             else:
-                action = random.choice(actions)
+                action = rand.choice(actions)
         except IndexError:
             raise Exception("Non-terminal state has no possible actions: " + str(state))
         if isinstance(state._possible_actions[action], DirectFlight):
@@ -100,26 +101,14 @@ class SpMcts:
         self,
         initial_state: SpMctsState,
         time_limit=None,
-        iteration_limit=None,
         exploration_constant=1 / math.sqrt(2),
         rollout_policy=random_policy,
         D=0.1,
-            select_treshold =10
+        select_treshold =10,
+        meta_time_limit=1000
     ):
-        if time_limit is not None:
-            if iteration_limit is not None:
-                raise ValueError("Cannot have both a time limit and an iteration limit")
-            # time taken for each MCTS search in milliseconds
-            self.time_limit = time_limit
-            self.limit_type = "time"
-        else:
-            if iteration_limit is None:
-                raise ValueError("Must have either a time limit or an iteration limit")
-            # number of iterations of the search
-            if iteration_limit < 1:
-                raise ValueError("Iteration limit must be greater than one")
-            self.search_limit = iteration_limit
-            self.limit_type = "iterations"
+
+        self.search_limit = time_limit
         self.exploration_constant = exploration_constant
         self.rollout = rollout_policy
         self.D = D
@@ -127,23 +116,35 @@ class SpMcts:
         self.max_reward = float("-inf")
         self.max_steps = 0
         self.select_treshold = select_treshold
+        self.meta_time_limit = meta_time_limit
 
     def search(self):
+        meta_search_roots=[]
+        root = self.root
+        time_limit = time.time() + self.search_limit / 1000
+        while time.time() < time_limit:
+            meta_search_roots.append(self.meta_search(root, self.meta_time_limit))
+
+        best_root = max(((root, root.max_reward) for root in meta_search_roots), key=itemgetter(1))[0]
+        most_rewarding_child = self.get_most_rewarding_child(best_root)
+        return self.get_action(self.root, most_rewarding_child)
+
+    def meta_search(self, root, time_limit):
+        self.root = root
         executions = 0
-        if self.limit_type == "time":
-            time_limit = time.time() + self.time_limit / 1000
-            while time.time() < time_limit:
-                self.execute_round()
-                executions += 1
-                if executions % 1000 == 0:
-                    print("running ", executions, self.max_reward, self.max_steps)
-        else:
-            [self.execute_round() for i in range(self.search_limit)]
+        rand = random.Random()
 
-        best_child = self.get_best_child(self.root, 0, 0)
-        return self.get_action(self.root, best_child)
+        time_limit = time.time() + time_limit / 1000
+        while time.time() < time_limit:
+            self.execute_round(rand)
+            executions += 1
+            if executions % 1000 == 0:
+                print("running ", executions, self.max_reward, self.max_steps)
 
-    def execute_round(self):
+        print(f"meta search ended with max_reward={self.root.max_reward}")
+        return self.root
+
+    def execute_round(self, rand):
         node = self.select_node(self.root)
         reward, steps = self.rollout(node.state)
         self.max_reward = max(self.max_reward, reward)
@@ -153,8 +154,8 @@ class SpMcts:
 
     def get_next_action(self, action):
         self.root = self.root.children[action]
-        best_child = self.get_best_child(self.root, 0, 0)
-        return self.get_action(self.root, best_child)
+        most_rewarding_child = self.get_most_rewarding_child(self.root)
+        return self.get_action(self.root, most_rewarding_child)
 
     def select_node(self, node):
         if node.num_visits < self.select_treshold:
@@ -199,7 +200,11 @@ class SpMcts:
         }
         best_child = max(nodes_values, key=itemgetter(0))
         return best_child[1]
-    # @staticmethod
+
+    @staticmethod
+    def get_most_rewarding_child(node):
+        return max(((child, child.max_reward) for child in node.children.values()), key=itemgetter(1))[0]
+        # @staticmethod
     # def __node_value(child, exploration_value, node, D):
     #     return (
     #         node.state.get_current_player() * child.total_reward / child.num_visits

@@ -5,6 +5,17 @@ from pandemic.learning.mcts import MctsState
 from pandemic.simulation.model.actions import DirectFlight
 from pandemic.simulation.model.enums import GameState
 from pandemic.simulation.simulation import Simulation
+from pandemic.simulation.state import InternalState
+
+
+def compute_reward(int_state: InternalState):
+    reward = False
+    if int_state.game_state == GameState.WIN:
+        reward = 4
+    elif int_state.game_state == GameState.LOST:
+        cure_reward = sum(int_state.cures.values()) * 1
+        reward = cure_reward if cure_reward > 0 else 0
+    return reward
 
 
 class PandemicMctsState(MctsState):
@@ -23,6 +34,7 @@ class PandemicMctsState(MctsState):
         phase=1,
         action_filter=lambda x: True,
         steps=0,
+        reward_function=compute_reward
     ):
         self.env: Simulation = env
         self.state = pickle.dumps(state)
@@ -34,6 +46,7 @@ class PandemicMctsState(MctsState):
         self._reward = reward
         self.phase = phase
         self.steps = steps
+        self.reward_function=reward_function
 
     def is_terminal(self) -> bool:
         return self._is_terminal
@@ -49,12 +62,7 @@ class PandemicMctsState(MctsState):
             self.env.step(action)
         actions = self.action_list(self.env.get_possible_actions())
         done = self.env.state.game_state != GameState.RUNNING
-        reward = False
-        if self.env.state.game_state == GameState.WIN:
-            reward = 4
-        elif self.env.state.game_state == GameState.LOST:
-            cure_reward = sum(self.env.state.cures.values()) * 1
-            reward = cure_reward if cure_reward > 0 else 0
+        reward = self.reward_function(self.env.state.internal_state)
 
         # if any(self.env.state.cures.values()):
         #     print("found cure !__@_#_@_#_!__@_#arstarst_#)#)#) v", self.env.state.cures)
@@ -68,6 +76,7 @@ class PandemicMctsState(MctsState):
             self.env.state.phase,
             self.action_filter,
             self.env.state.internal_state.steps,
+            self.reward_function
         )
 
     def get_reward(self):
