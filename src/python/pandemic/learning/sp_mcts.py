@@ -104,8 +104,8 @@ class SpMcts:
         exploration_constant=1 / math.sqrt(2),
         rollout_policy=random_policy,
         D=0.1,
-        select_treshold =10,
-        meta_time_limit=1000
+        select_treshold=10,
+        meta_time_limit=1000,
     ):
 
         self.search_limit = time_limit
@@ -119,15 +119,16 @@ class SpMcts:
         self.meta_time_limit = meta_time_limit
 
     def search(self):
-        meta_search_roots=[]
+        meta_search_roots = []
         root = self.root
         time_limit = time.time() + self.search_limit / 1000
         while time.time() < time_limit:
             meta_search_roots.append(self.meta_search(root, self.meta_time_limit))
 
         best_root = max(((root, root.max_reward) for root in meta_search_roots), key=itemgetter(1))[0]
+        self.root = best_root
         most_rewarding_child = self.get_most_rewarding_child(best_root)
-        return self.get_action(self.root, most_rewarding_child)
+        return self.get_action(best_root, most_rewarding_child), best_root.state
 
     def meta_search(self, root, time_limit):
         self.root = root
@@ -160,7 +161,6 @@ class SpMcts:
     def select_node(self, node):
         if node.num_visits < self.select_treshold:
             return node
-
         while not node.is_terminal:
             if node.is_fully_expanded:
                 node = self.get_best_child(node, self.exploration_constant, self.D)
@@ -193,7 +193,9 @@ class SpMcts:
 
     @staticmethod
     def get_best_child(node, exploration_value, D):
-        nodes_values = ((SpMcts.__node_value(child, exploration_value, node, D), child) for child in node.children.values())
+        nodes_values = (
+            (SpMcts.__node_value(child, exploration_value, node, D), child) for child in node.children.values()
+        )
         nodes_viz = {
             node.state._possible_actions[a]: (SpMcts.__node_value(c, exploration_value, node, D), c)
             for a, c in node.children.items()
@@ -205,6 +207,7 @@ class SpMcts:
     def get_most_rewarding_child(node):
         return max(((child, child.max_reward) for child in node.children.values()), key=itemgetter(1))[0]
         # @staticmethod
+
     # def __node_value(child, exploration_value, node, D):
     #     return (
     #         node.state.get_current_player() * child.total_reward / child.num_visits

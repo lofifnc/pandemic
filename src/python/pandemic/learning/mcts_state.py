@@ -18,6 +18,16 @@ def compute_reward(int_state: InternalState):
     return reward
 
 
+def compute_ts_reward(int_state: InternalState):
+    if int_state.game_state == GameState.WIN:
+        return 4
+    elif int_state.game_state == GameState.LOST:
+        return 0
+    else:
+        cure_reward = sum(int_state.cures.values()) * 1
+        return cure_reward if cure_reward > 0 else False
+
+
 class PandemicMctsState(MctsState):
     """Returns 1 if it is the maximizer player's turn to choose an action, or -1 for the minimiser player"""
 
@@ -34,7 +44,7 @@ class PandemicMctsState(MctsState):
         phase=1,
         action_filter=lambda x: True,
         steps=0,
-        reward_function=compute_reward
+        reward_function=compute_reward,
     ):
         self.env: Simulation = env
         self.state = pickle.dumps(state)
@@ -46,7 +56,7 @@ class PandemicMctsState(MctsState):
         self._reward = reward
         self.phase = phase
         self.steps = steps
-        self.reward_function=reward_function
+        self.reward_function = reward_function
 
     def is_terminal(self) -> bool:
         return self._is_terminal
@@ -76,14 +86,12 @@ class PandemicMctsState(MctsState):
             self.env.state.phase,
             self.action_filter,
             self.env.state.internal_state.steps,
-            self.reward_function
+            self.reward_function,
         )
 
     def get_reward(self):
-        if self.is_terminal():
-            return self._reward
-        else:
-            return False
+        return self._reward
+
 
     def get_possible_actions(self):
         return range(0, len(self._possible_actions))
@@ -94,3 +102,19 @@ class PandemicMctsState(MctsState):
         else:
             filtered_actions = list(filter(self.action_filter, actions))
             return filtered_actions if filtered_actions else actions
+
+
+class PandemicTreeSearchState(PandemicMctsState):
+    def __init__(
+        self,
+        env: Simulation,
+        state,
+        possible_actions=None,
+        done=False,
+        reward=False,
+        phase=1,
+        action_filter=lambda x: True,
+        steps=0,
+        reward_function=compute_ts_reward,
+    ):
+        super().__init__(env, state, possible_actions, done, reward, phase, action_filter, steps, reward_function)

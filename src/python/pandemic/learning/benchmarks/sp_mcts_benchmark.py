@@ -23,7 +23,7 @@ initial_state = PandemicMctsState(env, easy_state)
 mcts = SpMcts(initial_state, time_limit=30000, exploration_constant=0.06, D=0.1, select_treshold=100)
 next_state = initial_state
 # viz = Visualization(env.state.internal_state)
-bestAction = mcts.search()
+bestAction, next_state = mcts.search()
 next_action = next_state._possible_actions[bestAction]
 print(next_action)
 next_state = next_state.take_action(bestAction)
