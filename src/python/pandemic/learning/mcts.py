@@ -138,7 +138,10 @@ class Mcts:
     def get_best_child(node, exploration_value):
         best_value = float("-inf")
         best_nodes = []
-        nodes_values = {node.state._possible_actions[a]: Mcts.__node_value(c, exploration_value, node) for a, c in node.children.items()}
+        nodes_values = {
+            node.state._possible_actions[a]: Mcts.__node_value(c, exploration_value, node)
+            for a, c in node.children.items()
+        }
 
         for child in node.children.values():
             node_value = Mcts.__node_value(child, exploration_value, node)

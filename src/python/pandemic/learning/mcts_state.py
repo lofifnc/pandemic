@@ -22,15 +22,18 @@ class PandemicMctsState(MctsState):
         reward=False,
         phase=1,
         action_filter=lambda x: True,
+        steps=0,
     ):
         self.env: Simulation = env
         self.state = pickle.dumps(state)
         self.action_filter = action_filter
-        self._possible_actions = self.action_list(env.get_possible_actions()) if possible_actions is None else possible_actions
+        self._possible_actions = (
+            self.action_list(env.get_possible_actions()) if possible_actions is None else possible_actions
+        )
         self._is_terminal = done
         self._reward = reward
         self.phase = phase
-
+        self.steps = steps
 
     def is_terminal(self) -> bool:
         return self._is_terminal
@@ -57,7 +60,14 @@ class PandemicMctsState(MctsState):
         #     print("found cure !__@_#_@_#_!__@_#arstarst_#)#)#) v", self.env.state.cures)
         assert self.state != new_state
         return PandemicMctsState(
-            self.env, self.env.state.internal_state, actions, done, reward, self.env.state.phase, self.action_filter
+            self.env,
+            self.env.state.internal_state,
+            actions,
+            done,
+            reward,
+            self.env.state.phase,
+            self.action_filter,
+            self.env.state.internal_state.steps,
         )
 
     def get_reward(self):
