@@ -1,6 +1,6 @@
 import pickle
 
-from pandemic.learning.environment import PandemicEnvironment
+from pandemic.learning.environment import Pandemic
 from pandemic.learning.mcts import MctsState
 from pandemic.simulation.model.actions import DirectFlight
 from pandemic.simulation.model.enums import GameState

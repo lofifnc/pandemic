@@ -19,7 +19,7 @@ action_filter = (
 
 env.state.internal_state = easy_state
 print(easy_state.active_player)
-initial_state = PandemicMctsState(env, easy_state)
+initial_state = PandemicMctsState(env, easy_state, action_filter=action_filter)
 mcts = Mcts(time_limit=15000, exploration_constant=0.1)
 next_state = initial_state
 # viz = Visualization(env.state.internal_state)

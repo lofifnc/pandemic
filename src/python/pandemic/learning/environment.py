@@ -12,7 +12,7 @@ from pandemic.simulation.model.enums import GameState
 from pandemic.simulation.simulation import Simulation, PLAYER_COUNT
 
 
-class PandemicEnvironment(gym.Env):
+class Pandemic(gym.Env):
     def __init__(
         self,
         num_epidemic_cards: int = 5,
@@ -66,12 +66,12 @@ class PandemicEnvironment(gym.Env):
             self._steps += 1
             self._simulation.step(action_statement)
 
-        reward = self._get_reward()
+        reward = self._get_reward(self._simulation.state.internal_state)
         self.performed_actions_reward.append((action_statement, reward))
         self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
 
         self.observation_space = self._get_obs()
-        done = self._simulation.state.game_state != GameState.RUNNING
+        done = self._get_done()
         # observation, reward, done, info
         return self.observation_space, reward, done, {"steps": self._steps}
 
@@ -82,6 +82,9 @@ class PandemicEnvironment(gym.Env):
         self._simulation.state.internal_state = value
         self._action_lookup, self.action_space = self._encode_possible_actions(self._simulation.get_possible_actions())
         self.observation_space = self._get_obs()
+
+    def _get_done(self):
+        return self._simulation.state.game_state != GameState.RUNNING
 
     @staticmethod
     def _get_reward(state) -> float:
@@ -112,7 +115,7 @@ class PandemicEnvironment(gym.Env):
         lookup = dict()
         features = [0] * ACTION_SPACE_DIM
         bump_dict = defaultdict(int)
-        [PandemicEnvironment._insert_action(features, lookup, bump_dict, action) for action in possible_actions]
+        [Pandemic._insert_action(features, lookup, bump_dict, action) for action in possible_actions]
 
         return lookup, np.array(features)
 
@@ -131,7 +134,7 @@ class PandemicEnvironment(gym.Env):
             feature_actions[index] = value
             return index
         else:
-            return PandemicEnvironment.__insert_with_shift(feature_actions, index + 1, value)
+            return Pandemic.__insert_with_shift(feature_actions, index + 1, value)
 
     def _get_obs(self) -> np.array:
         state = self._simulation.state
@@ -182,7 +185,7 @@ class PandemicEnvironment(gym.Env):
         hands_feature_vector = np.ndarray.flatten(
             np.array(
                 [
-                    PandemicEnvironment.pad_with_zeros(10, np.array(list(player.cards)))
+                    Pandemic.pad_with_zeros(10, np.array(list(player.cards)))
                     for player in state.players.values()
                 ]
             )
@@ -191,7 +194,7 @@ class PandemicEnvironment(gym.Env):
         cures_vector = [int(s) for s in state.cures.values()]
 
         # list of cubes normalized less is bad
-        cubes_stack_vector = np.array(list(c / 24 for c in state.cubes.values()))
+        cubes_stack_vector = np.array([c / 24 for c in state.cubes.values()])
         # list of latest outbreaks ?
 
         return np.concatenate(

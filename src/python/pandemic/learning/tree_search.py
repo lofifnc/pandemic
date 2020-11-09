@@ -92,6 +92,8 @@ class TreeSearch:
                     self.discovered_nodes += len(current_node.state.get_possible_actions())
                     reward = current_node.state.get_reward()
                     if reward and current_reward != reward:
+                        if reward >= 2:
+                            print(f"reward {reward} after {current_node.state.steps} steps")
                         current_reward = reward
                         reward = reward + 1 / current_node.state.steps
                         self.max_reward = max(self.max_reward, reward)
@@ -161,7 +163,7 @@ class TreeSearch:
     @staticmethod
     def __node_value(child, exploration_value, node, D):
         return (
-            child.max_reward / child.num_visits
+            child.max_reward
             + exploration_value * math.sqrt(2 * math.log(node.num_visits) / child.num_visits)
             + math.sqrt(
                 (child.squared_reward - child.num_visits * math.pow(child.total_reward / child.num_visits, 2) + D)
