@@ -17,11 +17,53 @@ pub struct City<'a> {
     // text_alignment: &'a str,
 }
 
-pub fn city_neighbors(city_id: usize) -> &'static [usize] {
+#[derive(Debug)]
+pub enum Action {
+    Move { player: usize, city: i32 }
+}
+
+#[derive(Debug)]
+pub struct Player {
+    city: usize,
+    color: Virus,
+}
+
+pub struct State {
+    actions: i8,
+    players: [Player; 4],
+    active_player: usize,
+}
+
+impl State {
+    fn get_active_player(&self) -> &Player {
+        &self.players[self.active_player]
+    }
+}
+
+pub fn city_neighbors(city_id: usize) -> &'static [i32] {
     GRID[city_id]
 }
 
-const GRID: [&[usize]; 48] = [
+pub const START_STATE: State = State {
+    actions: 4,
+    players: [
+        Player { city: 1, color: Virus::Red },
+        Player { city: 1, color: Virus::Black },
+        Player { city: 1, color: Virus::Blue },
+        Player { city: 1, color: Virus::Yellow }
+    ],
+    active_player: 0,
+};
+
+pub fn get_actions<'a>(state: State) -> Vec<Action> {
+    let active_player = state.get_active_player();
+    GRID[active_player.city]
+        .into_iter()
+        .map(|c| Action::Move { player: state.active_player, city: *c })
+        .collect()
+}
+
+const GRID: [&[i32]; 48] = [
     &[7, 25, 35, 14],
     &[47, 9, 28],
     &[36, 7, 45, 14, 17],
