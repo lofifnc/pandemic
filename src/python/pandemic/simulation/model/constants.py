@@ -315,3 +315,7 @@ PLAYER_ACTIONS = 4
 INFECTIONS_RATES = [2, 2, 2, 3, 3, 4, 4]
 
 COUNT_CUBES = 24
+
+for i, l in NEIGHBORS.items():
+    numbers = ", ".join([str(n - 1) for n in l])
+    print(f" &[{numbers}], ")

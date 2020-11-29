@@ -85,6 +85,7 @@ def test_easy_mode_play_trough():
     env.step(None)
     env.step(None)
     env.step(None)
+
     env.get_possible_actions()
     env.step(DiscoverCure(target_virus=4))
     env.get_possible_actions()
